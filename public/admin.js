@@ -218,7 +218,7 @@ $('#saveContent').addEventListener('click', async () => {
   };
   btn.disabled = true; msg.textContent = '儲存中…';
   try {
-    await F.setDoc(F.doc(db, 'site', 'config'), data);
+    await F.setDoc(F.doc(db, 'site', 'config'), data, { merge: true });
     cfg = { ...data }; renderContent();
     msg.textContent = '已儲存 ✓ 網站重新整理就會看到';
   } catch (err) {
@@ -279,6 +279,7 @@ $('#photoGrid').addEventListener('change', async e => {
   try {
     const url = await compress(file, slot.max);
     await F.setDoc(F.doc(db, 'photos', slot.id), { data: url, updatedAt: F.serverTimestamp() });
+    await F.setDoc(F.doc(db, 'site', 'config'), { photoVer: { [slot.id]: Date.now() } }, { merge: true });
     showPhoto(card, url); msg.textContent = `已更新 ✓（${Math.round(url.length * 0.75 / 1024)} KB）`;
   } catch (err) {
     msg.textContent = err.code === 'permission-denied' ? '失敗：這個帳號還沒有管理員權限' : '失敗：' + err.message;
@@ -289,6 +290,10 @@ $('#photoGrid').addEventListener('click', async e => {
   if (!e.target.matches('[data-rm]')) return;
   const card = e.target.closest('.ph'), msg = card.querySelector('.ph-msg');
   if (!confirm('移除這張照片？')) return;
-  try { await F.deleteDoc(F.doc(db, 'photos', card.dataset.slot)); showPhoto(card, ''); msg.textContent = '已移除'; }
+  try {
+    await F.deleteDoc(F.doc(db, 'photos', card.dataset.slot));
+    await F.setDoc(F.doc(db, 'site', 'config'), { photoVer: { [card.dataset.slot]: F.deleteField() } }, { merge: true });
+    showPhoto(card, ''); msg.textContent = '已移除';
+  }
   catch (err) { msg.textContent = '失敗：' + err.message; }
 });

@@ -32,6 +32,7 @@ if (db) {
       if (Array.isArray(d.classes)) S.classes = d.classes;
       if (d.booking) Object.assign(S.booking, d.booking);
       if (Array.isArray(d.closedDates)) S.closedDates = d.closedDates;
+      if (d.photoVer) S.photoVer = d.photoVer;
     }
   } catch (e) { console.warn('site config not loaded, using data.js', e); }
 }
@@ -63,15 +64,31 @@ $$('.photo-slot').forEach(el => {
   img.src = m[1];
 });
 
-/* 後台上傳的照片（存在 Firestore photos/{slot}）優先 */
+/* 後台上傳的照片：site/config.photoVer 記版本，版本沒變就用瀏覽器快取，不重複讀資料庫 */
+const photoVer = S.photoVer || {};
+async function cachedPhoto(slot, v) {
+  const key = `/__photo/${slot}?v=${v}`;
+  let cache = null;
+  try { cache = await caches.open('tupo-photos'); } catch { /* 不支援就每次讀 */ }
+  if (cache) {
+    const hit = await cache.match(key);
+    if (hit) return hit.text();
+  }
+  const snap = await fs.getDoc(fs.doc(db, 'photos', slot));
+  const url = snap.exists() ? snap.data().data : '';
+  if (cache && url) {
+    for (const k of await cache.keys()) if (k.url.includes(`/__photo/${slot}?`)) await cache.delete(k);
+    await cache.put(key, new Response(url));
+  }
+  return url;
+}
 if (db) $$('.photo-slot[data-photo]').forEach(async el => {
+  const v = photoVer[el.dataset.photo];
+  if (!v) return; // 沒上傳過：完全不讀資料庫
   try {
-    const snap = await fs.getDoc(fs.doc(db, 'photos', el.dataset.photo));
-    if (snap.exists() && snap.data().data) {
-      el.style.setProperty('--photo', `url('${snap.data().data}')`);
-      el.classList.add('has-photo');
-    }
-  } catch { /* 沒權限或沒照片就用原本的 */ }
+    const url = await cachedPhoto(el.dataset.photo, v);
+    if (url) { el.style.setProperty('--photo', `url('${url}')`); el.classList.add('has-photo'); }
+  } catch { /* 讀不到就用原本的 */ }
 });
 
 /* ---------- schedule ---------- */
