@@ -3,7 +3,7 @@
   {"bounds":{"x":0,"y":0,"width":833,"height":843},"action":{"type":"uri","label":"預約私人課","uri":"https://liff.line.me/2012453936-jc7TPoii"}},
   {"bounds":{"x":833,"y":0,"width":834,"height":843},"action":{"type":"uri","label":"我的堂數","uri":"https://liff.line.me/2012453936-jc7TPoii?tab=me"}},
   {"bounds":{"x":1667,"y":0,"width":833,"height":843},"action":{"type":"uri","label":"固定課表","uri":"https://tupo-chongwei.web.app/#schedule"}},
-  {"bounds":{"x":0,"y":843,"width":833,"height":843},"action":{"type":"uri","label":"首次體驗","uri":"https://tupo-chongwei.web.app/?book"}},
+  {"bounds":{"x":0,"y":843,"width":833,"height":843},"action":{"type":"uri","label":"首次體驗","uri":"https://liff.line.me/2012453936-wvzYI7qS"}},
   {"bounds":{"x":833,"y":843,"width":834,"height":843},"action":{"type":"uri","label":"關於教練","uri":"https://tupo-chongwei.web.app/#about"}},
   {"bounds":{"x":1667,"y":843,"width":833,"height":843},"action":{"type":"message","label":"聯絡教練","text":"教練你好，我想詢問"}}
  ]}

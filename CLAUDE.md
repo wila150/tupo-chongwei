@@ -16,7 +16,7 @@
 - 網址不帶 .html（firebase.json cleanUrls）：後台 `/admin`、學員 App `/member`
 - 部署：`./deploy.sh`（會自動替 CSS/JS 換版本號，不要直接 firebase deploy）
 - Logo 已改用白色剪影熊頭像（`素材/20261107-201604_疤眼熊拳手頭像.png` 去背 → `public/img/logo-bear.png`、`icon-192.png`、`apple-touch-icon.png`）；舊 svg Logo 不再使用
-- LINE 官方帳號「突破Boxing」`@043ixcyx`（Messaging API channel 2012453121，secret 不進 git）。`line/`：圖文選單原稿 `richmenu.html` → `richmenu.jpg`（2500×1686）、區塊設定 `richmenu.json`、大頭貼 `line-avatar.png`。目前預設選單 6 格 `richmenu-d7bc91c10b3a485ae8998dd8fd5ea131`（原稿 `line/richmenu6.html`／`.json`）：預約私人課（學員 App）、我的堂數（App ?tab=me）、固定課表、首次體驗（/?book）、關於教練、聯絡教練（傳訊息）
+- LINE 官方帳號「突破Boxing」`@043ixcyx`（Messaging API channel 2012453121，secret 不進 git）。`line/`：圖文選單原稿 `richmenu.html` → `richmenu.jpg`（2500×1686）、區塊設定 `richmenu.json`、大頭貼 `line-avatar.png`。目前預設選單 6 格 `richmenu-aba0016ace76f63aedabd01019f7a086`（原稿 `line/richmenu6.html`／`.json`）：預約私人課（學員 App）、我的堂數（App ?tab=me）、固定課表、首次體驗（LIFF 預約頁，會帶 LINE 身分）、關於教練、聯絡教練（傳訊息）
 - 預約人資料記在學員手機 localStorage `tupo_profile_v1`，回頭客收起個人資料欄（`.returning`），只選日期時段
 - `/?book`：只顯示預約表單（html 加 `book-only` class），給 LINE 圖文選單用
 - 網站預約完成 → 跳「等一下會打開 LINE」視窗，用 `https://line.me/R/oaMessage/@043ixcyx/?訊息` 預填；預約區上方另有「立即預約（LINE）」

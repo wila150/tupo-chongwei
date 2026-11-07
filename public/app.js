@@ -247,8 +247,9 @@ form.addEventListener('submit', async e => {
     const d = new Date(`${data.date}T00:00:00`);
     $('#doneSummary').textContent = `${data.name}，你預約了 ${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time} 的私人課。`;
     const msg = `教練你好，我在網站預約了私人課：\n${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time}\n${data.name} ${data.phone}`;
-    const oa = S.contact.lineOA;
+    const oa = lineProfile ? null : S.contact.lineOA; // 從 LINE 預約的人，伺服器會直接把預約單傳到他的 LINE
     $('#doneLine').hidden = !oa;
+    if (lineProfile) $('#doneSummary').textContent += ' 預約單已經傳到你的 LINE，教練確認後會再通知你。';
     if (oa) {
       $('#lineMsg').textContent = msg;
       $('#lineGo').href = `https://line.me/R/oaMessage/${oa}/?${encodeURIComponent(msg)}`;

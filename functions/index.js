@@ -224,11 +224,82 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
   }
 });
 
-/* ---------- 網站新預約 → 通知 ---------- */
+/* ---------- 預約單卡片 ---------- */
+function bookingCard(b, { title, color, note, buttons }) {
+  const row = (k, v) => ({ type: 'box', layout: 'baseline', spacing: 'md', contents: [
+    { type: 'text', text: k, size: 'sm', color: '#999999', flex: 2 },
+    { type: 'text', text: String(v || '—'), size: 'sm', color: '#222222', flex: 5, wrap: true }] });
+  const bubble = {
+    type: 'bubble', size: 'mega',
+    header: { type: 'box', layout: 'vertical', backgroundColor: color, paddingAll: '16px', contents: [
+      { type: 'text', text: title, color: '#ffffff', weight: 'bold', size: 'lg' },
+      { type: 'text', text: '突破重圍・私人課預約單', color: '#ffffffcc', size: 'xs', margin: 'sm' }] },
+    body: { type: 'box', layout: 'vertical', spacing: 'md', contents: [
+      { type: 'text', text: `${md(b.date)} ${b.time}`, weight: 'bold', size: 'xxl' },
+      { type: 'separator', margin: 'md' },
+      row('姓名', b.name), row('電話', b.phone), row('人數', `${b.people || 1} 人`), row('程度', `${b.level || ''}・${b.who || ''}`),
+      row('想練', (b.goals || []).join('、')), ...(b.note ? [row('備註', b.note)] : []),
+      ...(note ? [{ type: 'text', text: note, size: 'xs', color: '#888888', wrap: true, margin: 'lg' }] : [])] }
+  };
+  if (buttons) bubble.footer = { type: 'box', layout: 'horizontal', spacing: 'sm', contents: buttons };
+  return { type: 'flex', altText: `${title}｜${md(b.date)} ${b.time} ${b.name}`, contents: bubble };
+}
+const pbBtn = (label, data, color) => ({ type: 'button', style: color ? 'primary' : 'secondary', color, height: 'sm', action: { type: 'postback', label, data, displayText: label } });
+
+async function adminIds() {
+  const snap = await db.doc('notify/config').get();
+  return snap.exists ? snap.data().lineUserIds || [] : [];
+}
+
+/* 網站／LIFF 新預約 → 客人收預約單、管理員收可直接確認的預約單 */
 export const onBookingCreated = onDocumentCreated('bookings/{id}', async ev => {
   const b = ev.data?.data(); if (!b) return;
-  await notifyAdmins(`🥊 新的私人課預約（待確認）\n${md(b.date)} ${b.time}\n${b.name} ${b.phone}${b.people > 1 ? `・${b.people} 人` : ''}\n${(b.goals || []).join('、')}${b.note ? `\n📝 ${b.note}` : ''}\n👉 ${SITE}/admin`);
+  b.id = ev.params.id;
+  if (b.lineUserId) await push(b.lineUserId, [bookingCard(b, { title: '📝 預約單已送出', color: '#d7262e', note: '教練確認後會再傳 LINE 通知你。要改時間或取消，直接在這裡傳訊息給教練。' })]);
+  const card = bookingCard(b, { title: '🥊 新的預約（待確認）', color: '#d7262e', note: b.lineUserId ? '客人已綁 LINE，確認後會自動通知他' : '客人沒有從 LINE 預約，確認後請用電話聯絡',
+    buttons: [pbBtn('✅ 確認', `bk=confirm&id=${b.id}`, '#2fbf71'), pbBtn('❌ 婉拒', `bk=reject&id=${b.id}`)] });
+  await Promise.all((await adminIds()).map(id => push(id, [card])));
 });
+
+/* 預約狀態改變（後台或 LINE 按鈕）→ 通知客人 */
+export const onBookingUpdated = onDocumentUpdated('bookings/{id}', async ev => {
+  const before = ev.data.before.data(), b = ev.data.after.data();
+  if (before.status === b.status || !b.lineUserId) return;
+  if (b.status === 'confirmed') await push(b.lineUserId, [bookingCard(b, { title: '✅ 預約成功', color: '#2fbf71', note: '當天見！上課前一晚會再提醒你。想改時間請直接傳訊息給教練。' })]);
+  if (b.status === 'cancelled') await push(b.lineUserId, [bookingCard(b, { title: '這個時段無法安排', color: '#555555', note: '抱歉這次沒辦法安排，歡迎再選其他時段，或直接傳訊息跟教練討論。' })]);
+});
+
+/* 管理員在 LINE 按「確認／婉拒」 */
+async function onBookingPostback(ev, q) {
+  const uid = ev.source.userId;
+  if (!(await adminIds()).includes(uid)) return reply(ev.replyToken, [text('只有教練可以操作喔')]);
+  const ref = db.doc(`bookings/${q.get('id')}`);
+  const res = await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return { msg: '找不到這筆預約' };
+    const b = snap.data();
+    if (b.status !== 'pending') return { msg: `這筆預約已經是「${b.status === 'confirmed' ? '已確認' : '已取消'}」了` };
+    if (q.get('bk') === 'reject') { tx.update(ref, { status: 'cancelled', handledBy: 'line' }); return { msg: `已婉拒 ${b.name} ${md(b.date)} ${b.time}${b.lineUserId ? '，已通知客人' : ''}` }; }
+    const busyRef = db.doc(`busy/${b.date}_${b.time.replace(':', '')}`);
+    if ((await tx.get(busyRef)).exists) return { msg: `⚠️ ${md(b.date)} ${b.time} 已經有其他課了，請到後台處理` };
+    const students = await tx.get(db.collection('students'));
+    const p = normPhone(b.phone);
+    const hit = students.docs.find(d => p && normPhone(d.data().phone) === p);
+    let sid;
+    if (hit) { sid = hit.id; if (b.lineUserId && !hit.data().lineUserId) tx.update(hit.ref, { lineUserId: b.lineUserId, lineName: b.lineName || '' }); }
+    else {
+      const sref = db.collection('students').doc(); sid = sref.id;
+      tx.set(sref, { name: b.name, phone: b.phone, lineId: b.lineId || '', note: '網站預約', credits: 0, createdAt: FieldValue.serverTimestamp(), ...(b.lineUserId ? { lineUserId: b.lineUserId, lineName: b.lineName || '' } : {}) });
+    }
+    tx.update(ref, { status: 'confirmed', handledBy: 'line' });
+    tx.set(busyRef, { date: b.date, time: b.time });
+    tx.set(db.doc(`lessons/bk_${ref.id}`), { date: b.date, time: b.time, minutes: 60, studentIds: [sid], studentNames: [b.name], status: 'scheduled', seriesId: null,
+      note: `網站預約${b.people > 1 ? `・${b.people} 人` : ''}`, bookingId: ref.id, createdAt: FieldValue.serverTimestamp() });
+    return { msg: `✅ 已確認 ${b.name} ${md(b.date)} ${b.time}，已排進課表${b.lineUserId ? '、已通知客人' : '（客人沒綁 LINE，請電話聯絡 ' + b.phone + '）'}` };
+  });
+  await reply(ev.replyToken, [text(res.msg)]);
+}
+
 
 /* ---------- 上課前一晚提醒（每天 20:00 台灣時間） ---------- */
 function reminderCard(l, st) {
@@ -276,6 +347,7 @@ export const nightlyReminder = onSchedule({ schedule: '0 20 * * *', timeZone: 'A
 
 async function onPostback(ev) {
   const q = new URLSearchParams(ev.postback.data || '');
+  if (q.get('bk')) return onBookingPostback(ev, q);
   const attend = q.get('attend'), lid = q.get('l'), sid = q.get('s');
   if (!attend || !lid || !sid) return;
   const [lSnap, sSnap] = await Promise.all([db.doc(`lessons/${lid}`).get(), db.doc(`students/${sid}`).get()]);
