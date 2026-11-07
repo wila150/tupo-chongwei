@@ -149,6 +149,13 @@ form.addEventListener('submit', async e => {
     }
     const d = new Date(`${data.date}T00:00:00`);
     $('#doneSummary').textContent = `${data.name}，你預約了 ${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time} 的私人課。`;
+    const msg = `教練你好，我在網站預約了私人課：\n${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time}\n${data.name} ${data.phone}`;
+    const line = $('#doneLine');
+    if (S.contact.line) {
+      line.hidden = false; line.href = S.contact.line;
+      line.onclick = () => { navigator.clipboard?.writeText(msg).catch(() => {}); };
+      line.textContent = '傳 LINE 告訴教練（自動複製預約內容）';
+    }
     form.hidden = true; $('#bookingDone').hidden = false;
     $('#booking').scrollIntoView({ behavior: 'smooth' });
   } catch (err) {

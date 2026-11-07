@@ -33,9 +33,10 @@ A.onAuthStateChanged(auth, user => {
   $('#appView').hidden = !user;
   unsub?.(); unsub = null;
   if (!user) return;
-  const q = F.query(F.collection(db, 'bookings'), F.orderBy('date'), F.orderBy('time'));
+  const q = F.query(F.collection(db, 'bookings'), F.orderBy('date'));
   unsub = F.onSnapshot(q, snap => {
-    all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
     render();
   }, err => {
     $('#list').innerHTML = `<p class="empty">讀取失敗：這個帳號可能沒有管理權限。</p>`;
