@@ -31,6 +31,16 @@ export function initCrm({ F, db, esc, $ }) {
     if (s.lineUserId) t.push('<span class="tag line">LINE 已綁定</span>');
     return t.join(' ');
   };
+  let pendingBk = [];
+  const IC = {
+    cal: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>',
+    bell: '<svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
+    alert: '<svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
+    user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+    money: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
+  };
+  let monthRevenue = null;
+
   let stFilter = 'all';
   const FILTERS = [
     ['all', '全部', () => true],
@@ -46,7 +56,7 @@ export function initCrm({ F, db, esc, $ }) {
   /* ---------- live data ---------- */
   F.onSnapshot(F.query(F.collection(db, 'students'), F.orderBy('name')), snap => {
     students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderStudents(); renderLessons(); renderPicker();
+    renderStudents(); renderLessons(); renderPicker(); renderHome();
   }, err => console.warn('students', err));
   let packages = [];
   F.onSnapshot(F.query(F.collection(db, 'packages'), F.orderBy('credits')), snap => {
@@ -57,7 +67,7 @@ export function initCrm({ F, db, esc, $ }) {
   F.onSnapshot(F.query(F.collection(db, 'lessons'), F.where('date', '>=', ymd(since))), snap => {
     lessons = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-    renderLessons();
+    renderLessons(); renderHome();
   }, err => console.warn('lessons', err));
 
   /* ================= 課務扣堂 ================= */
@@ -400,8 +410,57 @@ export function initCrm({ F, db, esc, $ }) {
   }
 
   /* ---------- 網站預約確認 → 自動建學員＋排課 ---------- */
+  /* ================= 總覽 ================= */
+  async function loadRevenue() {
+    try {
+      const m = todayStr().slice(0, 7);
+      const snap = await F.getDocs(F.query(F.collection(db, 'sales'), F.where('month', '>=', m)));
+      monthRevenue = snap.docs.map(d => d.data()).filter(x => x.month === m).reduce((a, x) => a + (x.amount || 0), 0);
+    } catch { monthRevenue = 0; }
+    renderHome();
+  }
+  loadRevenue();
+  function renderHome() {
+    if (!$('#homeKpis')) return;
+    const now = Date.now(), today = todayStr();
+    const todayL = lessons.filter(l => l.date === today && l.status !== 'cancelled');
+    const missed = lessons.filter(l => l.status === 'scheduled' && endMs(l) < now);
+    const renew = students.filter(s => s.credits <= RENEW_AT && !s.blocked);
+    const expiring = students.filter(s => { const d = daysLeft(s); return d !== null && d >= 0 && d <= 14; });
+    const kpi = (cls, ic, label, val, sub, go) => `<div class="kpi ${cls}" data-goto="${go}"><span class="kpi-ic">${ic}</span><small>${label}</small><b>${val}</b><small>${sub}</small></div>`;
+    $('#homeKpis').innerHTML =
+      kpi('', IC.cal, '今天的課', todayL.length, `${todayL.filter(l => l.status === 'done').length} 堂已完成`, 'lessons') +
+      kpi(pendingBk.length ? 'warn' : 'ok', IC.bell, '待確認預約', pendingBk.length, pendingBk.length ? '點這裡確認' : '都處理好了', 'bookings') +
+      kpi(missed.length ? 'warn' : 'ok', IC.alert, '漏扣提醒', missed.length, missed.length ? '上課時間過了還沒扣堂' : '沒有漏扣', 'lessons') +
+      kpi(renew.length ? 'warn' : 'ok', IC.user, '建議續約', renew.length, `共 ${students.length} 位學員`, 'students') +
+      kpi('ok', IC.money, `${new Date().getMonth() + 1} 月收入`, monthRevenue === null ? '…' : '$' + monthRevenue.toLocaleString(), '看報表', 'report');
+    $('#homeToday').innerHTML = todayL.length ? `<div class="tl">${todayL.map(l => {
+      const st = l.status === 'done' ? 'done' : (new Date(`${l.date}T${l.time}:00`).getTime() <= now && endMs(l) >= now ? 'now' : '');
+      const names = l.studentIds.map((id, i) => byId(id)?.name || l.studentNames?.[i] || '').filter(Boolean).join('、') || '未指定學員';
+      return `<div class="tl-item ${st}"><span class="tl-t">${l.time}</span><span class="tl-dot"></span><div><b>${esc(names)}</b><small>${l.minutes || 60} 分${l.source === 'line' ? '・LINE 預約' : ''}${st === 'now' ? '・上課中' : ''}</small></div>
+        ${l.status === 'done' ? '<span class="tag ok">已扣堂</span>' : `<button class="btn btn-sm" data-deduct="${l.id}">完課扣堂</button>`}</div>`;
+    }).join('')}</div>` : `<div class="empty-state">${IC.cal.replace('<svg', '<svg')}<b>今天沒有排課</b>好好休息，或到「課務扣堂」排新的課</div>`;
+    const todo = [
+      ...pendingBk.map(b => ({ c: '#f0b429', t: `${b.name} 預約 ${md(b.date)} ${b.time}`, s: '待確認', go: 'bookings' })),
+      ...missed.map(l => ({ c: 'var(--red)', t: `${md(l.date)} ${l.time} 還沒扣堂`, s: '漏扣', go: 'lessons' })),
+      ...expiring.map(s => ({ c: '#f0b429', t: `${s.name} 方案 ${s.expiresAt} 到期`, s: '快到期', go: 'students' })),
+      ...renew.slice(0, 5).map(s => ({ c: '#888', t: `${s.name} 剩 ${s.credits} 堂`, s: '建議續約', go: 'students' }))
+    ];
+    $('#homeTodo').innerHTML = todo.length ? todo.slice(0, 8).map(x => `<div class="todo" data-goto="${x.go}"><i class="dot" style="background:${x.c}"></i><span>${esc(x.t)}</span><em>${x.s}</em></div>`).join('')
+      : '<div class="empty-state" style="padding:1.4rem"><b>🎉 沒有待辦事項</b>全部都處理好了</div>';
+    const lb = document.querySelector('[data-badge=lessons]'); if (lb) { lb.hidden = !missed.length; lb.textContent = missed.length; lb.classList.add('warn'); }
+  }
+  $('#homeToday').addEventListener('click', async e => {
+    const id = e.target.dataset.deduct; if (!id) return;
+    const l = lessons.find(x => x.id === id); if (!l) return;
+    e.target.disabled = true;
+    try { await deduct(l); } catch (err) { alert('失敗：' + err.message); }
+    e.target.disabled = false;
+  });
+
   return {
-    renderReport,
+    renderReport, renderHome,
+    setPending(list) { pendingBk = list; renderHome(); },
     flag(phone) {
       const p = normPhone(phone); const st = p && students.find(x => normPhone(x.phone) === p);
       if (!st) return '';

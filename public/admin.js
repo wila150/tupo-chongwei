@@ -19,9 +19,10 @@ const auth = A.getAuth(app);
 const db = F.getFirestore(app);
 const storage = ST.getStorage(app);
 
-let all = [], filter = 'pending', unsub = null;
+let all = [], filter = 'pending', unsub = null, pendingCount = 0;
 
 $('#logout').addEventListener('click', () => A.signOut(auth));
+$('#logout2').addEventListener('click', () => A.signOut(auth));
 $('#googleLogin').addEventListener('click', async () => {
   $('#loginError').textContent = '';
   const provider = new A.GoogleAuthProvider();
@@ -44,6 +45,9 @@ A.onAuthStateChanged(auth, user => {
   $('#appView').hidden = !user;
   unsub?.(); unsub = null;
   if (!user) return;
+  $('#userName').textContent = user.displayName || '教練';
+  $('#userEmail').textContent = user.email || '';
+  if (user.photoURL) $('#userPhoto').src = user.photoURL;
   const q = F.query(F.collection(db, 'bookings'), F.orderBy('date'));
   unsub = F.onSnapshot(q, snap => {
     startCrm();
@@ -73,9 +77,11 @@ function render() {
     cancelled: all.filter(b => b.status === 'cancelled').reverse()
   };
   $('#cPending').textContent = groups.pending.length;
+  pendingCount = groups.pending.length; crm?.setPending?.(groups.pending);
+  const nb = document.querySelector('[data-badge=bookings]'); nb.hidden = !pendingCount; nb.textContent = pendingCount;
   $('#cUpcoming').textContent = groups.upcoming.length;
   const items = groups[filter];
-  $('#list').innerHTML = items.length ? items.map(card).join('') : '<p class="empty">目前沒有資料</p>';
+  $('#list').innerHTML = items.length ? items.map(card).join('') : `<div class="empty-state"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg><b>${{ pending: '沒有待確認的預約', upcoming: '還沒有即將上課的預約', past: '還沒有上過的課', cancelled: '沒有取消的預約' }[filter]}</b>學員從網站預約後會出現在這裡，也會傳 LINE 通知你</div>`;
 }
 
 function card(b) {
@@ -120,18 +126,28 @@ $('#list').addEventListener('click', async e => {
 });
 
 /* ================= 網站內容編輯 ================= */
-$('#views').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  document.querySelectorAll('#views button').forEach(x => x.classList.toggle('active', x === b));
-  $('#bookingsView').hidden = b.dataset.v !== 'bookings';
-  $('#contentView').hidden = b.dataset.v !== 'content';
-  $('#lessonsView').hidden = b.dataset.v !== 'lessons';
-  $('#studentsView').hidden = b.dataset.v !== 'students';
-  $('#reportView').hidden = b.dataset.v !== 'report';
-  if (b.dataset.v === 'report') crm?.renderReport();
-  if (b.dataset.v === 'content' && !cfg) loadContent();
-  if (b.dataset.v === 'content' && !photosLoaded) loadPhotos();
+const TITLES = { home: '總覽', bookings: '網站預約', lessons: '課務扣堂', students: '學員', report: '報表', content: '網站內容' };
+function showView(v) {
+  document.querySelectorAll('#views button').forEach(x => x.classList.toggle('active', x.dataset.v === v));
+  for (const k of Object.keys(TITLES)) { const el = document.getElementById(`${k}View`); if (el) el.hidden = k !== v; }
+  $('#pageTitle').textContent = TITLES[v];
+  const d = new Date(); $('#pageSub').textContent = v === 'home' ? `${d.getMonth() + 1} 月 ${d.getDate()} 日 星期${DAY[d.getDay()]}・${greet()}，${(auth.currentUser?.displayName || '教練').split(' ')[0]}` : '';
+  if (v === 'content' && !cfg) loadContent();
+  if (v === 'content' && !photosLoaded) loadPhotos();
+  if (v === 'report') crm?.renderReport();
+  if (v === 'home') crm?.renderHome?.();
+  scrollTo(0, 0);
+}
+const greet = () => { const h = new Date().getHours(); return h < 11 ? '早安' : h < 18 ? '午安' : '晚安'; };
+$('#views').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showView(b.dataset.v); });
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-goto]'); if (g) { showView(g.dataset.goto); return; }
+  const q = e.target.closest('[data-quick]'); if (!q) return;
+  if (q.dataset.quick === 'lesson') { showView('lessons'); $('#lessonForm').hidden = false; }
+  if (q.dataset.quick === 'student') { showView('students'); $('#addStudentBtn').click(); }
+  if (q.dataset.quick === 'sell') { showView('students'); $('#stSearch').focus(); }
 });
+showView('home');
 
 const DAYS_FULL = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 const ALL_TIMES = Array.from({ length: 17 }, (_, i) => `${String(i + 6).padStart(2, '0')}:00`); // 06:00–22:00
