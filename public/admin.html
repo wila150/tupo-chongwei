@@ -7,7 +7,7 @@
   <title>教練後台｜突破重圍</title>
   <link rel="icon" href="img/icon-192.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072220">
+  <link rel="stylesheet" href="styles.css?v=202611072224">
   <style>
     body { padding: 0; }
     [hidden] { display: none !important; }
@@ -177,6 +177,14 @@
       .kpi:last-child { grid-column: 1 / -1; }
       .tl-item { grid-template-columns: 50px 12px 1fr auto; gap: .6rem; }
     }
+    .gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: .8rem; }
+    .gal-item { background: var(--ink); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
+    .gal-item .ph-img { aspect-ratio: 1; }
+    .gal-item input { width: 100%; background: transparent; border: 0; border-top: 1px solid #2a2a2a; color: var(--paper); padding: .5rem .6rem; font: inherit; font-size: .85rem; }
+    .gal-acts { display: flex; border-top: 1px solid #2a2a2a; }
+    .gal-acts button { flex: 1; background: none; border: 0; color: var(--muted); padding: .45rem 0; cursor: pointer; font: inherit; }
+    .gal-acts button:hover { color: var(--paper); background: #1a1a1a; }
+    .gal-acts button[data-gdel]:hover { color: var(--red); }
     .savebar { position: sticky; bottom: 0; background: rgba(14,14,14,.95); padding: 1rem 0; display: flex; gap: 1rem; align-items: center; border-top: 1px solid #2a2a2a; }
     .savebar .msg { color: var(--muted); }
     @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .cls { grid-template-columns: 1fr 1fr; padding: .8rem; border: 1px solid #2a2a2a; border-radius: 10px; } .cls-head { display: none; } .cls .del { grid-column: 1 / -1; } }
@@ -351,6 +359,14 @@
       </div>
 
       <div class="panel">
+        <h2>相簿（作品集）</h2>
+        <p class="hint">可以一次選很多張，會自動縮圖上傳，<b>馬上出現在網站「訓練花絮」</b>。說明打完離開輸入框就會儲存。</p>
+        <label class="btn btn-sm" style="margin-bottom:1rem">＋ 上傳照片<input type="file" accept="image/*" multiple hidden id="galleryInput"></label>
+        <span class="muted" id="galleryMsg" style="margin-left:.6rem"></span>
+        <div class="gal" id="galleryGrid"></div>
+      </div>
+
+      <div class="panel">
         <h2>照片</h2>
         <p class="hint">選好照片會自動縮圖並<b>馬上更新到網站</b>（不用按下面的儲存）。建議用橫的照片。</p>
         <div class="photos" id="photoGrid"></div>
@@ -362,7 +378,7 @@
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611072220"></script>
-  <script type="module" src="admin.js?v=202611072220"></script>
+  <script src="data.js?v=202611072224"></script>
+  <script type="module" src="admin.js?v=202611072224"></script>
 </body>
 </html>

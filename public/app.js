@@ -34,6 +34,7 @@ if (db) {
       if (Array.isArray(d.closedDates)) S.closedDates = d.closedDates;
       if (d.photos) S.photos = d.photos;
       if (Array.isArray(d.reels)) S.reels = d.reels;
+      if (Array.isArray(d.gallery)) S.gallery = d.gallery;
     }
   } catch (e) { console.warn('site config not loaded, using data.js', e); }
 }
@@ -105,6 +106,25 @@ if (reels.length) {
     document.body.appendChild(sc);
   }, { rootMargin: '600px' });
   rio.observe($('#reels'));
+}
+
+/* ---------- 相簿（後台上傳，點開放大） ---------- */
+const album = (S.gallery || []).filter(g => g && g.url);
+if (album.length) {
+  $('#album').hidden = false;
+  $$('[data-album-link]').forEach(a => a.hidden = false);
+  $('#albumGrid').innerHTML = album.map((g, i) => `<figure data-i="${i}"><img src="${g.url}" alt="${(g.caption || '訓練花絮').replace(/"/g, '&quot;')}" loading="lazy">${g.caption ? `<figcaption>${g.caption.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</figcaption>` : ''}</figure>`).join('');
+  let cur = 0;
+  const lb = $('#lightbox');
+  const show = i => { cur = (i + album.length) % album.length; $('#lbImg').src = album[cur].url; $('#lbCap').textContent = album[cur].caption || ''; lb.hidden = false; };
+  $('#albumGrid').addEventListener('click', e => { const f = e.target.closest('figure'); if (f) show(Number(f.dataset.i)); });
+  lb.addEventListener('click', e => {
+    const a = e.target.closest('[data-lb]')?.dataset.lb;
+    if (a === 'prev') show(cur - 1); else if (a === 'next') show(cur + 1); else if (a === 'close' || e.target === lb) lb.hidden = true;
+  });
+  addEventListener('keydown', e => { if (lb.hidden) return; if (e.key === 'ArrowLeft') show(cur - 1); if (e.key === 'ArrowRight') show(cur + 1); if (e.key === 'Escape') lb.hidden = true; });
+  let tx = 0; lb.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  lb.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); });
 }
 
 /* ---------- reveal on scroll ---------- */

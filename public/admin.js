@@ -134,6 +134,7 @@ function showView(v) {
   const d = new Date(); $('#pageSub').textContent = v === 'home' ? `${d.getMonth() + 1} 月 ${d.getDate()} 日 星期${DAY[d.getDay()]}・${greet()}，${(auth.currentUser?.displayName || '教練').split(' ')[0]}` : '';
   if (v === 'content' && !cfg) loadContent();
   if (v === 'content' && !photosLoaded) loadPhotos();
+  if (v === 'content' && !gallery) loadGallery();
   if (v === 'report') crm?.renderReport();
   if (v === 'home') crm?.renderHome?.();
   scrollTo(0, 0);
@@ -357,4 +358,62 @@ $('#reelRows').addEventListener('click', e => {
   else if (d.rmreel) r.splice(+d.rmreel, 1);
   else return;
   renderReels(); $('#saveMsg').textContent = '有修改，記得按儲存';
+});
+
+/* ---------- 相簿（作品集）：Storage photos/gallery/*.webp，清單存 site/config.gallery ---------- */
+let gallery = null;
+async function loadGallery() {
+  try { const snap = await F.getDoc(F.doc(db, 'site', 'config')); gallery = (snap.exists() && snap.data().gallery) || []; } catch { gallery = []; }
+  renderGallery();
+}
+function renderGallery() {
+  $('#galleryGrid').innerHTML = gallery.map((g, i) => `<div class="gal-item">
+    <div class="ph-img" style="background-image:url('${g.url}')"></div>
+    <input data-gcap="${i}" value="${esc(g.caption || '')}" placeholder="寫點說明（可留空）" maxlength="60">
+    <div class="gal-acts"><button data-gmove="${i}" data-d="-1" title="往前">←</button><button data-gmove="${i}" data-d="1" title="往後">→</button><button data-gdel="${i}" title="刪除">✕</button></div>
+  </div>`).join('') || '<p class="hint">還沒有照片</p>';
+  $('#galleryMsg').textContent = gallery.length ? `共 ${gallery.length} 張` : '';
+}
+async function saveGallery(msg) {
+  await F.setDoc(F.doc(db, 'site', 'config'), { gallery }, { merge: true });
+  if (msg) $('#galleryMsg').textContent = msg;
+}
+$('#galleryInput').addEventListener('change', async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  if (!files.length) return;
+  if (!gallery) await loadGallery();
+  let done = 0;
+  for (const file of files) {
+    $('#galleryMsg').textContent = `上傳中 ${done + 1}/${files.length}…`;
+    try {
+      const blob = await compress(file, 1600);
+      const name = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      const path = `photos/gallery/${name}.webp`;
+      const r = ST.ref(storage, path);
+      await ST.uploadBytes(r, blob, { contentType: 'image/webp', cacheControl: 'public, max-age=31536000' });
+      gallery.unshift({ url: await ST.getDownloadURL(r), path, caption: '' });
+      done++;
+    } catch (err) { $('#galleryMsg').textContent = `有一張失敗：${err.code === 'storage/unauthorized' ? '沒有權限' : err.message}`; }
+  }
+  renderGallery();
+  await saveGallery(`已上傳 ${done} 張 ✓`).catch(err => { $('#galleryMsg').textContent = '儲存失敗：' + err.message; });
+});
+$('#galleryGrid').addEventListener('change', async e => {
+  const i = e.target.dataset.gcap; if (i === undefined) return;
+  gallery[i].caption = e.target.value.trim();
+  await saveGallery('說明已儲存 ✓').catch(err => { $('#galleryMsg').textContent = '儲存失敗：' + err.message; });
+});
+$('#galleryGrid').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.gmove !== undefined) {
+    const i = Number(b.dataset.gmove), j = i + Number(b.dataset.d);
+    if (j < 0 || j >= gallery.length) return;
+    [gallery[i], gallery[j]] = [gallery[j], gallery[i]];
+    renderGallery(); await saveGallery('順序已儲存 ✓').catch(() => {});
+  } else if (b.dataset.gdel !== undefined) {
+    if (!confirm('刪除這張照片？')) return;
+    const [g] = gallery.splice(Number(b.dataset.gdel), 1);
+    renderGallery(); await saveGallery('已刪除').catch(() => {});
+    if (g.path) ST.deleteObject(ST.ref(storage, g.path)).catch(() => {});
+  }
 });
