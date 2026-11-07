@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="theme-color" content="#0e0e0e">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072238">
+  <link rel="stylesheet" href="styles.css?v=202611072249">
   <style>
     body { padding: 0; }
     [hidden] { display: none !important; }
@@ -186,6 +186,7 @@
       .kpi:last-child { grid-column: 1 / -1; }
       .tl-item { grid-template-columns: 50px 12px 1fr auto; gap: .6rem; }
     }
+    .alb-extra { grid-column: 1 / -1; display: grid; gap: .7rem; padding: .9rem; border-top: 1px solid #2a2a2a; }
     .alb-list { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: .5rem; padding: .7rem; border-top: 1px solid #2a2a2a; }
     .alb-list .gal-item .ph-img { aspect-ratio: 1; }
     .ph-img { position: relative; }
@@ -396,7 +397,7 @@
 
       <div class="panel">
         <h2>照片</h2>
-        <p class="hint">每個位置都是一本相簿：可以一次上傳多張、取名字，<b>第一張是封面</b>，網站上點封面就能看整本。改動會<b>馬上更新到網站</b>（不用按下面的儲存）。</p>
+        <p class="hint">每個位置都是一本相簿：網站上點封面會進到<b>相簿頁</b>（照片牆＋IG Reels）。按「管理相簿」可以寫說明、加 Reels、排照片順序（<b>第一張是封面</b>）。改動<b>馬上生效</b>，不用按下面的儲存。</p>
         <div class="photos" id="photoGrid"></div>
       </div>
 
@@ -406,7 +407,7 @@
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611072238"></script>
-  <script type="module" src="admin.js?v=202611072238"></script>
+  <script src="data.js?v=202611072249"></script>
+  <script type="module" src="admin.js?v=202611072249"></script>
 </body>
 </html>

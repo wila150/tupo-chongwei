@@ -9,7 +9,7 @@
 - `public/data.js` 預設資料：固定課表（取自海報 `../素材/20261107-180958_拳擊.jpg`）、聯絡方式（LINE @043ixcyx、IG _cwl1127._ 已填；電話待補）、私人課可預約時段
 - `public/firebase-config.js` 為 null 時是示範模式（預約不會存）
 - Firestore：`bookings`（學員只能 create）、`busy`（教練確認後寫入的時段，公開讀，前台用來灰掉已約時段）、`site/config`（網站內容，公開讀、管理員寫）、`admins/{uid 或 Email}`（只能從 console 建）
-- 照片＝固定位置相簿（coach/g1/g2/g3；hero 只一張）：後台「網站內容 → 照片」每格可多張上傳、取相簿名、說明、排序（第一張＝封面）→ Storage `photos/albums/<位置>/*.webp`，清單 `site/config.albums.<位置>`、名稱 `site/config.albumTitles`；前台封面顯示名稱＋張數，點開燈箱看整本（舊 `site/config.photos` 仍當封面備援）
+- 照片＝固定位置相簿（coach/g1/g2/g3；hero 只一張）：後台「網站內容 → 照片」每格可多張上傳、取相簿名、說明、排序（第一張＝封面）→ Storage `photos/albums/<位置>/*.webp`，清單 `site/config.albums.<位置>`、名稱 `site/config.albumTitles`；前台封面顯示名稱＋照片/影片數，點進 **相簿頁 `/album?id=<位置>`**（`album.html`＋`album.js`：標題、說明 `albumDesc`、IG Reels `albumReels`、照片牆＋燈箱、其他相簿；參考光塵 collectionItemDetail 簡化）（舊 `site/config.photos` 仍當封面備援）
 - IG Reels 作品集：後台「網站內容 → IG 影片」貼網址 → `site/config.reels`，前台 `#reels` 區塊（沒影片就隱藏），滑到附近才載入 instagram embed.js
 - Logo 原稿在 `logo/`，定稿 `tupo-chongwei-v4.svg`（文字還沒轉曲線）
 - 本機預覽：`cd public && python3 -m http.server 8080`

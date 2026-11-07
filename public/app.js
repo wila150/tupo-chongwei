@@ -36,6 +36,7 @@ if (db) {
       if (Array.isArray(d.reels)) S.reels = d.reels;
       if (d.albums) S.albums = d.albums;
       if (d.albumTitles) S.albumTitles = d.albumTitles;
+      if (d.albumReels) S.albumReels = d.albumReels;
     }
   } catch (e) { console.warn('site config not loaded, using data.js', e); }
 }
@@ -80,30 +81,32 @@ addEventListener('keydown', e => { if (lb.hidden) return; if (e.key === 'ArrowLe
 let lbX = 0; lb.addEventListener('touchstart', e => { lbX = e.touches[0].clientX; }, { passive: true });
 lb.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - lbX; if (Math.abs(dx) > 50) showLb(lbCur + (dx < 0 ? 1 : -1)); });
 
-/* ---------- 固定照片位置＝相簿：第一張當封面，點開看整本（後台「網站內容 → 照片」） ---------- */
-const albums = S.albums || {}, albumTitles = S.albumTitles || {}, legacyPhotos = S.photos || {};
+/* ---------- 固定照片位置＝相簿：第一張當封面，點進去是相簿頁 /album?id=<位置>（照片＋Reels） ---------- */
+const albums = S.albums || {}, albumTitles = S.albumTitles || {}, albumReels = S.albumReels || {}, legacyPhotos = S.photos || {};
 $$('.photo-slot[data-photo]').forEach(el => {
   const slot = el.dataset.photo;
   const list = (albums[slot] || []).filter(x => x && x.url);
+  const reels = (albumReels[slot] || []).filter(Boolean);
   const cover = list[0]?.url || legacyPhotos[slot];
-  if (!cover) return;
-  const img = new Image();
-  el.dataset.cover = '1'; // 後台照片優先，舊的檔案檢查不要覆蓋
-  img.onload = () => { el.style.setProperty('--photo', `url('${cover}')`); el.classList.add('has-photo'); };
-  img.src = cover;
-  if (slot === 'hero' || !list.length) return;
-  const title = albumTitles[slot] || '';
-  if (title || list.length > 1) {
-    const cap = document.createElement('div');
-    cap.className = 'slot-cap';
-    cap.innerHTML = `<b></b><span>📷 ${list.length} 張</span>`;
-    cap.querySelector('b').textContent = title;
-    el.appendChild(cap);
+  if (cover) {
+    const img = new Image();
+    el.dataset.cover = '1'; // 後台照片優先，舊的檔案檢查不要覆蓋
+    img.onload = () => { el.style.setProperty('--photo', `url('${cover}')`); el.classList.add('has-photo'); };
+    img.src = cover;
   }
+  if (slot === 'hero' || (!list.length && !reels.length)) return;
+  const title = albumTitles[slot] || '';
+  const cap = document.createElement('div');
+  cap.className = 'slot-cap';
+  cap.innerHTML = `<b></b><span>${[list.length ? `📷 ${list.length}` : '', reels.length ? `▶ ${reels.length}` : ''].filter(Boolean).join('　')}</span>`;
+  cap.querySelector('b').textContent = title || '看更多';
+  el.appendChild(cap);
+  if (!cover) el.classList.add('has-photo', 'no-cover');
   el.classList.add('clickable');
-  el.setAttribute('role', 'button'); el.tabIndex = 0;
-  el.addEventListener('click', () => openLightbox(list, 0));
-  el.addEventListener('keydown', e => { if (e.key === 'Enter') openLightbox(list, 0); });
+  el.setAttribute('role', 'link'); el.tabIndex = 0;
+  const go = () => { location.href = `/album?id=${slot}`; };
+  el.addEventListener('click', go);
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
 });
 
 /* ---------- schedule ---------- */

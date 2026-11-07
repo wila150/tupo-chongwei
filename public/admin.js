@@ -270,14 +270,14 @@ const SLOTS = [
   { id: 'g3', name: '訓練照片 3', where: '私人課區', max: 1600 },
   { id: 'hero', name: '首頁背景', where: '首頁最上方（會壓暗，只用一張）', max: 1920, single: true }
 ];
-let photosLoaded = false, albums = {}, albumTitles = {}, legacyPhotos = {};
+let photosLoaded = false, albums = {}, albumTitles = {}, albumDesc = {}, albumReels = {}, legacyPhotos = {};
 
 async function loadPhotos() {
   photosLoaded = true;
   try {
     const snap = await F.getDoc(F.doc(db, 'site', 'config'));
     const d = snap.exists() ? snap.data() : {};
-    albums = d.albums || {}; albumTitles = d.albumTitles || {}; legacyPhotos = d.photos || {};
+    albums = d.albums || {}; albumTitles = d.albumTitles || {}; albumDesc = d.albumDesc || {}; albumReels = d.albumReels || {}; legacyPhotos = d.photos || {};
   } catch {}
   // 舊版單張照片轉成相簿第一張
   for (const s of SLOTS) if (!albums[s.id]?.length && legacyPhotos[s.id]) albums[s.id] = [{ url: legacyPhotos[s.id], path: `photos/${s.id}.webp`, caption: '' }];
@@ -293,9 +293,15 @@ function renderSlot(id) {
     <div class="ph-body"><b>${s.name}</b><small>${s.where}</small>
       ${s.single ? '' : `<input class="inp" data-title value="${esc(albumTitles[id] || '')}" placeholder="相簿名稱（例：比賽紀錄）" maxlength="20">`}
       <div class="ph-actions"><label class="btn btn-sm">${s.single ? (list.length ? '換一張' : '上傳') : '＋ 加照片'}<input type="file" accept="image/*" ${s.single ? '' : 'multiple'} hidden></label>
-      ${!s.single && list.length ? `<button type="button" class="btn btn-ghost btn-sm" data-manage>${open ? '收起' : `管理（${list.length}）`}</button>` : ''}
+      ${!s.single ? `<button type="button" class="btn btn-ghost btn-sm" data-manage>${open ? '收起' : `管理相簿（${list.length} 照片・${(albumReels[id] || []).length} 影片）`}</button>` : ''}
       ${s.single && list.length ? '<button type="button" class="btn btn-ghost btn-sm" data-rmall>移除</button>' : ''}</div>
       <small class="ph-msg"></small></div>
+    ${open && !s.single ? `<div class="alb-extra">
+      <label class="field">相簿說明（顯示在相簿頁最上面）<textarea class="inp" data-desc rows="3" maxlength="600" placeholder="例：2026 全國拳擊錦標賽，帶學員出賽的紀錄。">${esc(albumDesc[id] || '')}</textarea></label>
+      <div class="field">IG Reels 影片<div style="display:flex;gap:.5rem;margin-top:.3rem"><input class="inp" data-reelurl placeholder="貼上 Reels 連結"><button type="button" class="btn btn-ghost btn-sm" data-addreel>加入</button></div></div>
+      ${(albumReels[id] || []).map((u, i) => `<div class="reel-row"><a href="${esc(u)}" target="_blank" rel="noopener">▶ ${esc(u.replace('https://www.instagram.com', ''))}</a><button type="button" data-rmreel="${i}" title="刪除">✕</button></div>`).join('')}
+      <a class="btn btn-ghost btn-sm" href="/album?id=${id}" target="_blank" style="justify-self:start">預覽相簿頁 →</a>
+    </div>` : ''}
     ${open && !s.single ? `<div class="alb-list">${list.map((g, i) => `<div class="gal-item">
       <div class="ph-img" style="background-image:url('${g.url}')">${i === 0 ? '<span class="cnt">封面</span>' : ''}</div>
       <input data-cap="${i}" value="${esc(g.caption || '')}" placeholder="說明" maxlength="60">
@@ -324,6 +330,12 @@ $('#photoGrid').addEventListener('change', async e => {
     await F.setDoc(F.doc(db, 'site', 'config'), { albumTitles: { [id]: albumTitles[id] } }, { merge: true }).then(() => slotMsg(card, '名稱已儲存 ✓')).catch(err => slotMsg(card, '失敗：' + errText(err)));
     return;
   }
+  if (e.target.matches('[data-desc]')) {
+    albumDesc[id] = e.target.value.trim();
+    await F.setDoc(F.doc(db, 'site', 'config'), { albumDesc: { [id]: albumDesc[id] } }, { merge: true }).then(() => slotMsg(card, '說明已儲存 ✓')).catch(err => slotMsg(card, '失敗：' + errText(err)));
+    return;
+  }
+  if (e.target.matches('[data-reelurl]')) return;
   if (e.target.matches('[data-cap]')) {
     albums[id][e.target.dataset.cap].caption = e.target.value.trim();
     await saveAlbum(id).then(() => slotMsg(card, '說明已儲存 ✓')).catch(err => slotMsg(card, '失敗：' + errText(err)));
@@ -357,6 +369,18 @@ $('#photoGrid').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
   const card = b.closest('.ph'), id = card.dataset.slot, list = albums[id] || [];
   if (b.matches('[data-manage]')) { card.classList.toggle('open'); renderSlot(id); return; }
+  if (b.matches('[data-addreel]')) {
+    const u = normReel(card.querySelector('[data-reelurl]').value);
+    if (!u) return slotMsg(card, '這不是 IG Reels 或貼文的網址');
+    albumReels[id] = [...new Set([...(albumReels[id] || []), u])];
+    await F.setDoc(F.doc(db, 'site', 'config'), { albumReels: { [id]: albumReels[id] } }, { merge: true }).catch(err => slotMsg(card, '失敗：' + errText(err)));
+    renderSlot(id); slotMsg($(`.ph[data-slot="${id}"]`), '影片已加入 ✓'); return;
+  }
+  if (b.dataset.rmreel !== undefined) {
+    albumReels[id].splice(Number(b.dataset.rmreel), 1);
+    await F.setDoc(F.doc(db, 'site', 'config'), { albumReels: { [id]: albumReels[id] } }, { merge: true }).catch(() => {});
+    renderSlot(id); return;
+  }
   if (b.matches('[data-rmall]')) {
     if (!confirm('移除這張照片？')) return;
     const old = list.splice(0); await saveAlbum(id).catch(() => {}); old.forEach(g => g.path && ST.deleteObject(ST.ref(storage, g.path)).catch(() => {}));

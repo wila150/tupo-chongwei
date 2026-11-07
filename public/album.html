@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>相簿｜突破重圍 BREAK THROUGH</title>
+  <link rel="icon" href="img/icon-192.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=202611072249">
+  <style>
+    html, body { overflow-x: hidden; max-width: 100%; }
+    .al-wrap { width: min(1120px, 92%); margin: 0 auto; padding: 6.5rem 0 4rem; }
+    .al-back { display: inline-flex; margin-bottom: 1.4rem; }
+    .al-title { font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.15; letter-spacing: .04em; }
+    .al-tags { display: flex; gap: .5rem; margin: .9rem 0 1.2rem; flex-wrap: wrap; }
+    .al-tags span { border: 1px solid #3a3a3a; border-radius: 999px; padding: .2rem .8rem; font-size: .85rem; color: var(--muted); }
+    .al-tags span:first-child { border-color: var(--red); color: var(--paper); }
+    .al-desc { color: #d6cfc4; max-width: 720px; white-space: pre-line; line-height: 1.9; margin-bottom: 2rem; }
+    .al-h { font-size: 1.15rem; margin: 2.4rem 0 1rem; display: flex; align-items: center; gap: .6rem; }
+    .al-h::before { content: ''; width: 4px; height: 1.1em; background: var(--red); border-radius: 2px; }
+    .al-grid { columns: 3 280px; column-gap: 1rem; }
+    .al-grid figure { break-inside: avoid; margin: 0 0 1rem; border-radius: 12px; overflow: hidden; cursor: zoom-in; position: relative; background: var(--ink-2); }
+    .al-grid img { width: 100%; display: block; transition: transform .4s; }
+    .al-grid figure:hover img { transform: scale(1.03); }
+    .al-grid figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.8rem .9rem .7rem; background: linear-gradient(0deg, rgba(0,0,0,.8), transparent); font-size: .9rem; font-weight: 700; }
+    .al-empty { color: var(--muted); padding: 4rem 0; text-align: center; }
+    .al-wrap .reels { justify-content: flex-start; }
+    .al-next { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .al-next a { position: relative; aspect-ratio: 4/3; border-radius: 12px; overflow: hidden; background: #1c1c1c center/cover; display: flex; align-items: flex-end; padding: .8rem; font-weight: 900; }
+    .al-next a::before { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,.75), transparent 60%); }
+    .al-next a span { position: relative; }
+    @media (max-width: 760px) { .al-grid { columns: 2 140px; column-gap: .6rem; } .al-grid figure { margin-bottom: .6rem; } }
+  </style>
+</head>
+<body>
+<header class="nav scrolled" id="nav">
+  <a href="/" class="nav-brand"><img src="img/logo-bear.png" alt="突破重圍 Logo"><span>突破<em>重圍</em></span></a>
+  <a href="/#booking" class="btn btn-sm">預約私人課</a>
+</header>
+<main class="al-wrap">
+  <a href="/#private" class="btn btn-ghost btn-sm al-back">← 回首頁</a>
+  <div id="alBody"><p class="al-empty">讀取中…</p></div>
+</main>
+<div class="lightbox" id="lightbox" hidden>
+  <button class="lb-x" data-lb="close" aria-label="關閉">✕</button>
+  <button class="lb-nav lb-prev" data-lb="prev" aria-label="上一張">‹</button>
+  <figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
+  <button class="lb-nav lb-next" data-lb="next" aria-label="下一張">›</button>
+</div>
+<script src="data.js?v=202611072249"></script>
+<script type="module" src="album.js?v=202611072249"></script>
+</body>
+</html>
