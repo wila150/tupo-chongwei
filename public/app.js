@@ -63,6 +63,17 @@ $$('.photo-slot').forEach(el => {
   img.src = m[1];
 });
 
+/* 後台上傳的照片（存在 Firestore photos/{slot}）優先 */
+if (db) $$('.photo-slot[data-photo]').forEach(async el => {
+  try {
+    const snap = await fs.getDoc(fs.doc(db, 'photos', el.dataset.photo));
+    if (snap.exists() && snap.data().data) {
+      el.style.setProperty('--photo', `url('${snap.data().data}')`);
+      el.classList.add('has-photo');
+    }
+  } catch { /* 沒權限或沒照片就用原本的 */ }
+});
+
 /* ---------- schedule ---------- */
 const order = d => (d + 6) % 7; // Monday first
 $('#scheduleList').innerHTML = [...S.classes]

@@ -7,9 +7,10 @@
   <title>教練後台｜突破重圍</title>
   <link rel="icon" href="img/icon-192.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072029">
+  <link rel="stylesheet" href="styles.css?v=202611072034">
   <style>
     body { padding: 1.2rem 4% 4rem; }
+    [hidden] { display: none !important; }
     .top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
     .top .nav-brand img { width: 36px; height: 36px; }
     .login { max-width: 360px; margin: 12vh auto; background: var(--ink-2); padding: 2rem; border-radius: var(--radius); border: 1px solid #2a2a2a; }
@@ -46,6 +47,14 @@
     .chips-del { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .8rem; }
     .chips-del span { background: var(--ink-3); border: 1px solid #333; border-radius: 999px; padding: .3rem .5rem .3rem .9rem; display: inline-flex; gap: .4rem; align-items: center; }
     .chips-del button { background: none; border: 0; color: var(--red); cursor: pointer; font-size: 1rem; }
+    .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .ph { background: var(--ink); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
+    .ph-img { aspect-ratio: 4/3; background: #1c1c1c center/cover no-repeat; display: grid; place-items: center; color: #555; font-size: .85rem; }
+    .ph-body { padding: .7rem .8rem; display: grid; gap: .5rem; }
+    .ph-body b { font-size: .95rem; }
+    .ph-body small { color: var(--muted); }
+    .ph-actions { display: flex; gap: .4rem; }
+    .ph-actions .btn { padding: .35rem .9rem; font-size: .85rem; }
     .savebar { position: sticky; bottom: 0; background: rgba(14,14,14,.95); padding: 1rem 0; display: flex; gap: 1rem; align-items: center; border-top: 1px solid #2a2a2a; }
     .savebar .msg { color: var(--muted); }
     @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .cls { grid-template-columns: 1fr 1fr; padding: .8rem; border: 1px solid #2a2a2a; border-radius: 10px; } .cls-head { display: none; } .cls .del { grid-column: 1 / -1; } }
@@ -120,12 +129,18 @@
         <div class="chips-del" id="offList"></div>
       </div>
 
+      <div class="panel">
+        <h2>照片</h2>
+        <p class="hint">選好照片會自動壓縮並<b>馬上更新到網站</b>（不用按下面的儲存）。建議用橫的照片。</p>
+        <div class="photos" id="photoGrid"></div>
+      </div>
+
       <div class="savebar"><button type="button" class="btn" id="saveContent">儲存並更新網站</button><span class="msg" id="saveMsg"></span></div>
     </div>
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611072029"></script>
-  <script type="module" src="admin.js?v=202611072029"></script>
+  <script src="data.js?v=202611072034"></script>
+  <script type="module" src="admin.js?v=202611072034"></script>
 </body>
 </html>

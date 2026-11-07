@@ -112,6 +112,7 @@ $('#views').addEventListener('click', e => {
   $('#bookingsView').hidden = b.dataset.v !== 'bookings';
   $('#contentView').hidden = b.dataset.v !== 'content';
   if (b.dataset.v === 'content' && !cfg) loadContent();
+  if (b.dataset.v === 'content' && !photosLoaded) loadPhotos();
 });
 
 const DAYS_FULL = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -223,4 +224,71 @@ $('#saveContent').addEventListener('click', async () => {
   } catch (err) {
     msg.textContent = err.code === 'permission-denied' ? '儲存失敗：這個帳號還沒有管理員權限' : '儲存失敗：' + err.message;
   } finally { btn.disabled = false; }
+});
+
+/* ---------- 照片：瀏覽器端壓縮後存 Firestore photos/{slot}（免 Storage／付費方案） ---------- */
+const SLOTS = [
+  { id: 'coach', name: '教練照片', where: '「關於教練」', max: 1400 },
+  { id: 'g1', name: '訓練照片 1', where: '私人課相簿（大張）', max: 1600 },
+  { id: 'g2', name: '訓練照片 2', where: '私人課相簿', max: 1200 },
+  { id: 'g3', name: '訓練照片 3', where: '私人課相簿', max: 1200 },
+  { id: 'hero', name: '首頁背景', where: '首頁最上方（會壓暗）', max: 1920 }
+];
+let photosLoaded = false;
+
+async function loadPhotos() {
+  photosLoaded = true;
+  $('#photoGrid').innerHTML = SLOTS.map(s => `<div class="ph" data-slot="${s.id}">
+    <div class="ph-img">讀取中…</div>
+    <div class="ph-body"><b>${s.name}</b><small>${s.where}</small>
+      <div class="ph-actions"><label class="btn btn-sm">上傳<input type="file" accept="image/*" hidden></label>
+      <button type="button" class="btn btn-ghost btn-sm" data-rm hidden>移除</button></div>
+      <small class="ph-msg"></small></div></div>`).join('');
+  await Promise.all(SLOTS.map(async s => {
+    const card = $(`.ph[data-slot="${s.id}"]`);
+    let url = '';
+    try { const snap = await F.getDoc(F.doc(db, 'photos', s.id)); url = snap.exists() ? snap.data().data : ''; } catch {}
+    showPhoto(card, url);
+  }));
+}
+
+function showPhoto(card, url) {
+  const box = card.querySelector('.ph-img');
+  box.style.backgroundImage = url ? `url('${url}')` : '';
+  box.textContent = url ? '' : '尚未上傳';
+  card.querySelector('[data-rm]').hidden = !url;
+}
+
+async function compress(file, max) {
+  const img = await createImageBitmap(file);
+  const scale = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  for (let q = 0.82; q >= 0.4; q -= 0.08) {
+    const url = c.toDataURL('image/webp', q);
+    if (url.length < 900000) return url;
+  }
+  throw new Error('照片太大，請換一張');
+}
+
+$('#photoGrid').addEventListener('change', async e => {
+  const file = e.target.files?.[0]; if (!file) return;
+  const card = e.target.closest('.ph'), slot = SLOTS.find(s => s.id === card.dataset.slot), msg = card.querySelector('.ph-msg');
+  msg.textContent = '壓縮上傳中…';
+  try {
+    const url = await compress(file, slot.max);
+    await F.setDoc(F.doc(db, 'photos', slot.id), { data: url, updatedAt: F.serverTimestamp() });
+    showPhoto(card, url); msg.textContent = `已更新 ✓（${Math.round(url.length * 0.75 / 1024)} KB）`;
+  } catch (err) {
+    msg.textContent = err.code === 'permission-denied' ? '失敗：這個帳號還沒有管理員權限' : '失敗：' + err.message;
+  } finally { e.target.value = ''; }
+});
+
+$('#photoGrid').addEventListener('click', async e => {
+  if (!e.target.matches('[data-rm]')) return;
+  const card = e.target.closest('.ph'), msg = card.querySelector('.ph-msg');
+  if (!confirm('移除這張照片？')) return;
+  try { await F.deleteDoc(F.doc(db, 'photos', card.dataset.slot)); showPhoto(card, ''); msg.textContent = '已移除'; }
+  catch (err) { msg.textContent = '失敗：' + err.message; }
 });

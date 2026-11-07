@@ -36,6 +36,14 @@ service cloud.firestore {
       allow write: if isAdmin() && doc == 'config';
     }
 
+    // 後台上傳的照片（壓縮後的 data URL）：公開讀，教練寫
+    match /photos/{slot} {
+      allow read: if true;
+      allow delete: if isAdmin();
+      allow create, update: if isAdmin() && slot in ['coach', 'g1', 'g2', 'g3', 'hero']
+        && request.resource.data.data is string && request.resource.data.data.size() < 1000000;
+    }
+
     match /admins/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if false;
