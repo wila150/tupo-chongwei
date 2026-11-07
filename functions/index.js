@@ -110,7 +110,7 @@ function slotOk(cfg, date, time) {
 }
 
 /* ---------- 學員 App API ---------- */
-export const api = onRequest({ cors: [SITE, 'https://tupo-chongwei.firebaseapp.com', /localhost/] }, async (req, res) => {
+export const api = onRequest({ invoker: 'public', cors: [SITE, 'https://tupo-chongwei.firebaseapp.com', /localhost/] }, async (req, res) => {
   try {
     if (req.method !== 'POST') throw httpErr(405, 'POST only');
     const { action, idToken } = req.body || {};
@@ -197,7 +197,7 @@ export const api = onRequest({ cors: [SITE, 'https://tupo-chongwei.firebaseapp.c
 });
 
 /* ---------- 官方帳號 Webhook ---------- */
-export const lineWebhook = onRequest(async (req, res) => {
+export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => {
   const sig = req.get('x-line-signature') || '';
   const mac = crypto.createHmac('sha256', process.env.LINE_MSG_SECRET).update(req.rawBody).digest('base64');
   if (!sig || sig.length !== mac.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(mac))) return res.status(401).send('bad signature');
