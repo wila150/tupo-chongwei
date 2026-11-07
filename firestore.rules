@@ -30,6 +30,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 網站內容（課表、聯絡方式、預約設定）：公開讀，教練在後台改
+    match /site/{doc} {
+      allow read: if true;
+      allow write: if isAdmin() && doc == 'config';
+    }
+
     match /admins/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if false;

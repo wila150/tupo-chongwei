@@ -18,6 +18,24 @@ if (firebaseConfig) {
   } catch (e) { console.error('Firebase init failed', e); }
 }
 
+/* ---------- 後台「網站內容」覆蓋 data.js 的預設值 ---------- */
+S.closedDates = [];
+if (db) {
+  try {
+    const snap = await Promise.race([
+      fs.getDoc(fs.doc(db, 'site', 'config')),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 4000))
+    ]);
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.contact) Object.assign(S.contact, d.contact);
+      if (Array.isArray(d.classes)) S.classes = d.classes;
+      if (d.booking) Object.assign(S.booking, d.booking);
+      if (Array.isArray(d.closedDates)) S.closedDates = d.closedDates;
+    }
+  } catch (e) { console.warn('site config not loaded, using data.js', e); }
+}
+
 /* ---------- nav ---------- */
 const nav = $('#nav');
 addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 40), { passive: true });
@@ -85,6 +103,7 @@ function slotState(date, time) {
   const dt = new Date(`${ymd(date)}T${time}:00`);
   if (dt - Date.now() < B.minHoursAhead * 3600e3) return false;
   if (busy.has(`${ymd(date)} ${time}`)) return false;
+  if (S.closedDates.includes(ymd(date))) return false;
   return !S.classes.some(c => c.day === date.getDay() &&
     start < toMin(c.end) + B.bufferMinutes && end > toMin(c.start) - B.bufferMinutes);
 }

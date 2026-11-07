@@ -7,7 +7,7 @@
   <title>教練後台｜突破重圍</title>
   <link rel="icon" href="img/icon-192.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072025">
+  <link rel="stylesheet" href="styles.css?v=202611072029">
   <style>
     body { padding: 1.2rem 4% 4rem; }
     .top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
@@ -28,6 +28,27 @@
     .bk-meta { color: var(--muted); font-size: .9rem; }
     .bk-actions { display: flex; flex-direction: column; gap: .4rem; align-items: stretch; }
     .bk-actions .btn { padding: .4rem 1rem; font-size: .9rem; }
+    .views { display: flex; gap: .5rem; margin-bottom: 1.4rem; border-bottom: 1px solid #2a2a2a; }
+    .views button { background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted); padding: .6rem .4rem; margin-right: 1rem; font: inherit; font-weight: 700; font-size: 1.05rem; cursor: pointer; }
+    .views button.active { color: var(--paper); border-bottom-color: var(--red); }
+    .panel { background: var(--ink-2); border: 1px solid #2a2a2a; border-radius: var(--radius); padding: 1.3rem; margin-bottom: 1.2rem; }
+    .panel h2 { font-size: 1.15rem; margin-bottom: .3rem; }
+    .panel .hint { color: var(--muted); font-size: .88rem; margin-bottom: 1rem; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem 1rem; }
+    .cls { display: grid; grid-template-columns: 90px 140px 140px 1fr 1fr 1fr 40px; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+    .cls input, .cls select, .num input { width: 100%; background: var(--ink); color: var(--paper); border: 1px solid #333; border-radius: 8px; padding: .5rem .6rem; font: inherit; font-size: .95rem; }
+    .cls-head { color: var(--muted); font-size: .8rem; }
+    .del { background: none; border: 1px solid #444; color: var(--muted); border-radius: 8px; height: 38px; cursor: pointer; }
+    .del:hover { color: var(--red); border-color: var(--red); }
+    .times { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: .4rem; }
+    .times button { padding: .5rem 0; border-radius: 8px; border: 1px solid #3a3a3a; background: transparent; color: var(--muted); font-family: var(--display); cursor: pointer; }
+    .times button.on { background: var(--red); border-color: var(--red); color: #fff; }
+    .chips-del { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .8rem; }
+    .chips-del span { background: var(--ink-3); border: 1px solid #333; border-radius: 999px; padding: .3rem .5rem .3rem .9rem; display: inline-flex; gap: .4rem; align-items: center; }
+    .chips-del button { background: none; border: 0; color: var(--red); cursor: pointer; font-size: 1rem; }
+    .savebar { position: sticky; bottom: 0; background: rgba(14,14,14,.95); padding: 1rem 0; display: flex; gap: 1rem; align-items: center; border-top: 1px solid #2a2a2a; }
+    .savebar .msg { color: var(--muted); }
+    @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .cls { grid-template-columns: 1fr 1fr; padding: .8rem; border: 1px solid #2a2a2a; border-radius: 10px; } .cls-head { display: none; } .cls .del { grid-column: 1 / -1; } }
     .empty { text-align: center; color: var(--muted); padding: 3rem 0; }
     @media (max-width: 600px) { .bk { grid-template-columns: 1fr; } .bk-actions { flex-direction: row; } }
   </style>
@@ -45,9 +66,14 @@
 
   <div id="appView" hidden>
     <div class="top">
-      <a href="./" class="nav-brand"><img src="img/logo-bear.png" alt=""><span>預約管理</span></a>
+      <a href="./" class="nav-brand"><img src="img/logo-bear.png" alt=""><span>教練後台</span></a>
       <button class="btn btn-ghost btn-sm" id="logout">登出</button>
     </div>
+    <div class="views" id="views">
+      <button data-v="bookings" class="active">預約管理</button>
+      <button data-v="content">網站內容</button>
+    </div>
+    <div id="bookingsView">
     <div class="tabs" id="tabs">
       <button data-f="pending" class="active">待確認<b id="cPending">0</b></button>
       <button data-f="upcoming">即將上課<b id="cUpcoming">0</b></button>
@@ -55,9 +81,51 @@
       <button data-f="cancelled">已取消</button>
     </div>
     <div class="list" id="list"></div>
+    </div>
+
+    <div id="contentView" hidden>
+      <div class="panel">
+        <h2>聯絡方式</h2>
+        <p class="hint">留空的項目，網站上就不會出現那顆按鈕。</p>
+        <div class="grid2">
+          <label class="field">LINE 官方帳號 ID<input id="cLineOA" placeholder="@043ixcyx"></label>
+          <label class="field">Instagram 網址<input id="cIg" placeholder="https://www.instagram.com/..."></label>
+          <label class="field">電話<input id="cPhone" inputmode="tel" placeholder="0912345678"></label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>固定課表</h2>
+        <p class="hint">首頁「固定課表」會照這裡顯示；這些時段前後也不會開放私人課預約。</p>
+        <div class="cls cls-head"><span>星期</span><span>開始</span><span>結束</span><span>地點</span><span>課程名稱</span><span>地區／說明</span><span></span></div>
+        <div id="clsList"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="addCls">＋ 新增一堂課</button>
+      </div>
+
+      <div class="panel">
+        <h2>私人課預約設定</h2>
+        <p class="hint">點時間切換開放／關閉（紅色＝開放）。</p>
+        <div class="times" id="timeGrid"></div>
+        <div class="grid2 num" style="margin-top:1rem">
+          <label class="field">開放預約未來幾天<input id="bDays" type="number" min="1" max="90"></label>
+          <label class="field">最晚幾小時前要預約<input id="bMinH" type="number" min="0" max="168"></label>
+          <label class="field">團課前後保留時間（分鐘）<input id="bBuf" type="number" min="0" max="180" step="5"></label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>休假日</h2>
+        <p class="hint">加入的日期整天不開放私人課預約。</p>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center"><input type="date" id="offDate" class="field" style="background:var(--ink);color:var(--paper);border:1px solid #333;border-radius:8px;padding:.5rem .6rem;font:inherit"><button type="button" class="btn btn-ghost btn-sm" id="addOff" style="padding:.5rem 1.2rem">加入</button></div>
+        <div class="chips-del" id="offList"></div>
+      </div>
+
+      <div class="savebar"><button type="button" class="btn" id="saveContent">儲存並更新網站</button><span class="msg" id="saveMsg"></span></div>
+    </div>
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script type="module" src="admin.js?v=202611072025"></script>
+  <script src="data.js?v=202611072029"></script>
+  <script type="module" src="admin.js?v=202611072029"></script>
 </body>
 </html>
