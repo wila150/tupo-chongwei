@@ -34,7 +34,8 @@ if (db) {
       if (Array.isArray(d.closedDates)) S.closedDates = d.closedDates;
       if (d.photos) S.photos = d.photos;
       if (Array.isArray(d.reels)) S.reels = d.reels;
-      if (Array.isArray(d.gallery)) S.gallery = d.gallery;
+      if (d.albums) S.albums = d.albums;
+      if (d.albumTitles) S.albumTitles = d.albumTitles;
     }
   } catch (e) { console.warn('site config not loaded, using data.js', e); }
 }
@@ -61,19 +62,48 @@ $$('.photo-slot').forEach(el => {
   const m = /url\('(.+?)'\)/.exec(el.getAttribute('style') || '');
   if (!m) return;
   const img = new Image();
-  img.onload = () => el.classList.add('has-photo');
-  img.onerror = () => el.style.setProperty('--photo', 'none');
+  img.onload = () => { if (!el.dataset.cover) el.classList.add('has-photo'); };
+  img.onerror = () => { if (!el.dataset.cover) el.style.setProperty('--photo', 'none'); };
   img.src = m[1];
 });
 
-/* 後台上傳的照片（Firebase Storage，網址存在 site/config.photos） */
-const photoUrls = S.photos || {};
+/* ---------- 燈箱（看相簿） ---------- */
+const lb = $('#lightbox');
+let lbList = [], lbCur = 0;
+function openLightbox(list, i = 0) { lbList = list; showLb(i); lb.hidden = false; }
+function showLb(i) { lbCur = (i + lbList.length) % lbList.length; $('#lbImg').src = lbList[lbCur].url; $('#lbCap').textContent = `${lbList[lbCur].caption || ''}${lbList.length > 1 ? `　${lbCur + 1} / ${lbList.length}` : ''}`; }
+lb.addEventListener('click', e => {
+  const a = e.target.closest('[data-lb]')?.dataset.lb;
+  if (a === 'prev') showLb(lbCur - 1); else if (a === 'next') showLb(lbCur + 1); else if (a === 'close' || e.target === lb) lb.hidden = true;
+});
+addEventListener('keydown', e => { if (lb.hidden) return; if (e.key === 'ArrowLeft') showLb(lbCur - 1); if (e.key === 'ArrowRight') showLb(lbCur + 1); if (e.key === 'Escape') lb.hidden = true; });
+let lbX = 0; lb.addEventListener('touchstart', e => { lbX = e.touches[0].clientX; }, { passive: true });
+lb.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - lbX; if (Math.abs(dx) > 50) showLb(lbCur + (dx < 0 ? 1 : -1)); });
+
+/* ---------- 固定照片位置＝相簿：第一張當封面，點開看整本（後台「網站內容 → 照片」） ---------- */
+const albums = S.albums || {}, albumTitles = S.albumTitles || {}, legacyPhotos = S.photos || {};
 $$('.photo-slot[data-photo]').forEach(el => {
-  const url = photoUrls[el.dataset.photo];
-  if (!url) return;
+  const slot = el.dataset.photo;
+  const list = (albums[slot] || []).filter(x => x && x.url);
+  const cover = list[0]?.url || legacyPhotos[slot];
+  if (!cover) return;
   const img = new Image();
-  img.onload = () => { el.style.setProperty('--photo', `url('${url}')`); el.classList.add('has-photo'); };
-  img.src = url;
+  el.dataset.cover = '1'; // 後台照片優先，舊的檔案檢查不要覆蓋
+  img.onload = () => { el.style.setProperty('--photo', `url('${cover}')`); el.classList.add('has-photo'); };
+  img.src = cover;
+  if (slot === 'hero' || !list.length) return;
+  const title = albumTitles[slot] || '';
+  if (title || list.length > 1) {
+    const cap = document.createElement('div');
+    cap.className = 'slot-cap';
+    cap.innerHTML = `<b></b><span>📷 ${list.length} 張</span>`;
+    cap.querySelector('b').textContent = title;
+    el.appendChild(cap);
+  }
+  el.classList.add('clickable');
+  el.setAttribute('role', 'button'); el.tabIndex = 0;
+  el.addEventListener('click', () => openLightbox(list, 0));
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') openLightbox(list, 0); });
 });
 
 /* ---------- schedule ---------- */
@@ -106,25 +136,6 @@ if (reels.length) {
     document.body.appendChild(sc);
   }, { rootMargin: '600px' });
   rio.observe($('#reels'));
-}
-
-/* ---------- 相簿（後台上傳，點開放大） ---------- */
-const album = (S.gallery || []).filter(g => g && g.url);
-if (album.length) {
-  $('#album').hidden = false;
-  $$('[data-album-link]').forEach(a => a.hidden = false);
-  $('#albumGrid').innerHTML = album.map((g, i) => `<figure data-i="${i}"><img src="${g.url}" alt="${(g.caption || '訓練花絮').replace(/"/g, '&quot;')}" loading="lazy">${g.caption ? `<figcaption>${g.caption.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</figcaption>` : ''}</figure>`).join('');
-  let cur = 0;
-  const lb = $('#lightbox');
-  const show = i => { cur = (i + album.length) % album.length; $('#lbImg').src = album[cur].url; $('#lbCap').textContent = album[cur].caption || ''; lb.hidden = false; };
-  $('#albumGrid').addEventListener('click', e => { const f = e.target.closest('figure'); if (f) show(Number(f.dataset.i)); });
-  lb.addEventListener('click', e => {
-    const a = e.target.closest('[data-lb]')?.dataset.lb;
-    if (a === 'prev') show(cur - 1); else if (a === 'next') show(cur + 1); else if (a === 'close' || e.target === lb) lb.hidden = true;
-  });
-  addEventListener('keydown', e => { if (lb.hidden) return; if (e.key === 'ArrowLeft') show(cur - 1); if (e.key === 'ArrowRight') show(cur + 1); if (e.key === 'Escape') lb.hidden = true; });
-  let tx = 0; lb.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
-  lb.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); });
 }
 
 /* ---------- reveal on scroll ---------- */

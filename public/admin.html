@@ -7,7 +7,7 @@
   <title>教練後台｜突破重圍</title>
   <link rel="icon" href="img/icon-192.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072224">
+  <link rel="stylesheet" href="styles.css?v=202611072231">
   <style>
     body { padding: 0; }
     [hidden] { display: none !important; }
@@ -177,6 +177,13 @@
       .kpi:last-child { grid-column: 1 / -1; }
       .tl-item { grid-template-columns: 50px 12px 1fr auto; gap: .6rem; }
     }
+    .alb-list { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: .5rem; padding: .7rem; border-top: 1px solid #2a2a2a; }
+    .alb-list .gal-item .ph-img { aspect-ratio: 1; }
+    .ph-img { position: relative; }
+    .ph-img .cnt { position: absolute; right: .5rem; bottom: .5rem; background: rgba(0,0,0,.7); border-radius: 999px; padding: .1rem .55rem; font-size: .75rem; color: #fff; }
+    .ph-body .inp { padding: .45rem .6rem; font-size: .9rem; }
+    .photos .ph.open { grid-column: 1 / -1; display: grid; grid-template-columns: 260px 1fr; }
+    @media (max-width: 760px) { .photos .ph.open { grid-template-columns: 1fr; } }
     .gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: .8rem; }
     .gal-item { background: var(--ink); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
     .gal-item .ph-img { aspect-ratio: 1; }
@@ -359,16 +366,8 @@
       </div>
 
       <div class="panel">
-        <h2>相簿（作品集）</h2>
-        <p class="hint">可以一次選很多張，會自動縮圖上傳，<b>馬上出現在網站「訓練花絮」</b>。說明打完離開輸入框就會儲存。</p>
-        <label class="btn btn-sm" style="margin-bottom:1rem">＋ 上傳照片<input type="file" accept="image/*" multiple hidden id="galleryInput"></label>
-        <span class="muted" id="galleryMsg" style="margin-left:.6rem"></span>
-        <div class="gal" id="galleryGrid"></div>
-      </div>
-
-      <div class="panel">
         <h2>照片</h2>
-        <p class="hint">選好照片會自動縮圖並<b>馬上更新到網站</b>（不用按下面的儲存）。建議用橫的照片。</p>
+        <p class="hint">每個位置都是一本相簿：可以一次上傳多張、取名字，<b>第一張是封面</b>，網站上點封面就能看整本。改動會<b>馬上更新到網站</b>（不用按下面的儲存）。</p>
         <div class="photos" id="photoGrid"></div>
       </div>
 
@@ -378,7 +377,7 @@
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611072224"></script>
-  <script type="module" src="admin.js?v=202611072224"></script>
+  <script src="data.js?v=202611072231"></script>
+  <script type="module" src="admin.js?v=202611072231"></script>
 </body>
 </html>

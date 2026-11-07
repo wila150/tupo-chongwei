@@ -134,7 +134,6 @@ function showView(v) {
   const d = new Date(); $('#pageSub').textContent = v === 'home' ? `${d.getMonth() + 1} 月 ${d.getDate()} 日 星期${DAY[d.getDay()]}・${greet()}，${(auth.currentUser?.displayName || '教練').split(' ')[0]}` : '';
   if (v === 'content' && !cfg) loadContent();
   if (v === 'content' && !photosLoaded) loadPhotos();
-  if (v === 'content' && !gallery) loadGallery();
   if (v === 'report') crm?.renderReport();
   if (v === 'home') crm?.renderHome?.();
   scrollTo(0, 0);
@@ -263,35 +262,50 @@ $('#saveContent').addEventListener('click', async () => {
   } finally { btn.disabled = false; }
 });
 
-/* ---------- 照片：瀏覽器端縮圖成 webp → Firebase Storage photos/{slot}.webp，網址寫進 site/config.photos ---------- */
+/* ---------- 照片：每個固定位置是一本相簿 → Storage photos/albums/<位置>/*.webp，清單 site/config.albums.<位置>（第一張是封面） ---------- */
 const SLOTS = [
-  { id: 'coach', name: '教練照片', where: '「關於教練」', max: 1400 },
-  { id: 'g1', name: '訓練照片 1', where: '私人課相簿（大張）', max: 1600 },
-  { id: 'g2', name: '訓練照片 2', where: '私人課相簿', max: 1200 },
-  { id: 'g3', name: '訓練照片 3', where: '私人課相簿', max: 1200 },
-  { id: 'hero', name: '首頁背景', where: '首頁最上方（會壓暗）', max: 1920 }
+  { id: 'coach', name: '教練照片', where: '「關於教練」', max: 1600 },
+  { id: 'g1', name: '訓練照片 1', where: '私人課區（大張）', max: 1600 },
+  { id: 'g2', name: '訓練照片 2', where: '私人課區', max: 1600 },
+  { id: 'g3', name: '訓練照片 3', where: '私人課區', max: 1600 },
+  { id: 'hero', name: '首頁背景', where: '首頁最上方（會壓暗，只用一張）', max: 1920, single: true }
 ];
-let photosLoaded = false;
+let photosLoaded = false, albums = {}, albumTitles = {}, legacyPhotos = {};
 
 async function loadPhotos() {
   photosLoaded = true;
-  $('#photoGrid').innerHTML = SLOTS.map(s => `<div class="ph" data-slot="${s.id}">
-    <div class="ph-img">讀取中…</div>
-    <div class="ph-body"><b>${s.name}</b><small>${s.where}</small>
-      <div class="ph-actions"><label class="btn btn-sm">上傳<input type="file" accept="image/*" hidden></label>
-      <button type="button" class="btn btn-ghost btn-sm" data-rm hidden>移除</button></div>
-      <small class="ph-msg"></small></div></div>`).join('');
-  let urls = {};
-  try { const snap = await F.getDoc(F.doc(db, 'site', 'config')); urls = (snap.exists() && snap.data().photos) || {}; } catch {}
-  SLOTS.forEach(s => showPhoto($(`.ph[data-slot="${s.id}"]`), urls[s.id] || ''));
+  try {
+    const snap = await F.getDoc(F.doc(db, 'site', 'config'));
+    const d = snap.exists() ? snap.data() : {};
+    albums = d.albums || {}; albumTitles = d.albumTitles || {}; legacyPhotos = d.photos || {};
+  } catch {}
+  // 舊版單張照片轉成相簿第一張
+  for (const s of SLOTS) if (!albums[s.id]?.length && legacyPhotos[s.id]) albums[s.id] = [{ url: legacyPhotos[s.id], path: `photos/${s.id}.webp`, caption: '' }];
+  $('#photoGrid').innerHTML = SLOTS.map(s => `<div class="ph" data-slot="${s.id}"></div>`).join('');
+  SLOTS.forEach(s => renderSlot(s.id));
 }
 
-function showPhoto(card, url) {
-  const box = card.querySelector('.ph-img');
-  box.style.backgroundImage = url ? `url('${url}')` : '';
-  box.textContent = url ? '' : '尚未上傳';
-  card.querySelector('[data-rm]').hidden = !url;
+function renderSlot(id) {
+  const s = SLOTS.find(x => x.id === id), card = $(`.ph[data-slot="${id}"]`), list = albums[id] || [];
+  const open = card.classList.contains('open');
+  card.innerHTML = `
+    <div class="ph-img" style="${list[0] ? `background-image:url('${list[0].url}')` : ''}">${list[0] ? '' : '尚未上傳'}${list.length > 1 ? `<span class="cnt">📷 ${list.length} 張</span>` : ''}</div>
+    <div class="ph-body"><b>${s.name}</b><small>${s.where}</small>
+      ${s.single ? '' : `<input class="inp" data-title value="${esc(albumTitles[id] || '')}" placeholder="相簿名稱（例：比賽紀錄）" maxlength="20">`}
+      <div class="ph-actions"><label class="btn btn-sm">${s.single ? (list.length ? '換一張' : '上傳') : '＋ 加照片'}<input type="file" accept="image/*" ${s.single ? '' : 'multiple'} hidden></label>
+      ${!s.single && list.length ? `<button type="button" class="btn btn-ghost btn-sm" data-manage>${open ? '收起' : `管理（${list.length}）`}</button>` : ''}
+      ${s.single && list.length ? '<button type="button" class="btn btn-ghost btn-sm" data-rmall>移除</button>' : ''}</div>
+      <small class="ph-msg"></small></div>
+    ${open && !s.single ? `<div class="alb-list">${list.map((g, i) => `<div class="gal-item">
+      <div class="ph-img" style="background-image:url('${g.url}')">${i === 0 ? '<span class="cnt">封面</span>' : ''}</div>
+      <input data-cap="${i}" value="${esc(g.caption || '')}" placeholder="說明" maxlength="60">
+      <div class="gal-acts"><button data-move="${i}" data-d="-1" title="往前">←</button><button data-move="${i}" data-d="1" title="往後">→</button><button data-del="${i}" title="刪除">✕</button></div>
+    </div>`).join('')}</div>` : ''}`;
 }
+
+const slotMsg = (card, t) => { const m = card.querySelector('.ph-msg'); if (m) m.textContent = t; };
+const errText = err => ['permission-denied', 'storage/unauthorized'].includes(err.code) ? '沒有管理員權限' : err.message;
+const saveAlbum = id => F.setDoc(F.doc(db, 'site', 'config'), { albums: { [id]: albums[id] || [] } }, { merge: true });
 
 async function compress(file, max) {
   const img = await createImageBitmap(file);
@@ -303,32 +317,63 @@ async function compress(file, max) {
 }
 
 $('#photoGrid').addEventListener('change', async e => {
-  const file = e.target.files?.[0]; if (!file) return;
-  const card = e.target.closest('.ph'), slot = SLOTS.find(s => s.id === card.dataset.slot), msg = card.querySelector('.ph-msg');
-  msg.textContent = '壓縮上傳中…';
+  const card = e.target.closest('.ph'); if (!card) return;
+  const id = card.dataset.slot, s = SLOTS.find(x => x.id === id);
+  if (e.target.matches('[data-title]')) {
+    albumTitles[id] = e.target.value.trim();
+    await F.setDoc(F.doc(db, 'site', 'config'), { albumTitles: { [id]: albumTitles[id] } }, { merge: true }).then(() => slotMsg(card, '名稱已儲存 ✓')).catch(err => slotMsg(card, '失敗：' + errText(err)));
+    return;
+  }
+  if (e.target.matches('[data-cap]')) {
+    albums[id][e.target.dataset.cap].caption = e.target.value.trim();
+    await saveAlbum(id).then(() => slotMsg(card, '說明已儲存 ✓')).catch(err => slotMsg(card, '失敗：' + errText(err)));
+    return;
+  }
+  const files = [...(e.target.files || [])]; e.target.value = '';
+  if (!files.length) return;
+  const old = s.single ? (albums[id] || []) : [];
+  if (s.single) albums[id] = [];
+  albums[id] = albums[id] || [];
+  let done = 0;
+  for (const file of files) {
+    slotMsg(card, `上傳中 ${done + 1}/${files.length}…`);
+    try {
+      const blob = await compress(file, s.max);
+      const path = `photos/albums/${id}/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.webp`;
+      const r = ST.ref(storage, path);
+      await ST.uploadBytes(r, blob, { contentType: 'image/webp', cacheControl: 'public, max-age=31536000' });
+      albums[id].push({ url: await ST.getDownloadURL(r), path, caption: '' });
+      done++;
+    } catch (err) { slotMsg(card, '上傳失敗：' + errText(err)); }
+  }
   try {
-    const blob = await compress(file, slot.max);
-    const r = ST.ref(storage, `photos/${slot.id}.webp`);
-    await ST.uploadBytes(r, blob, { contentType: 'image/webp', cacheControl: 'public, max-age=31536000' });
-    const url = `${await ST.getDownloadURL(r)}&v=${Date.now()}`;
-    await F.setDoc(F.doc(db, 'site', 'config'), { photos: { [slot.id]: url } }, { merge: true });
-    showPhoto(card, url); msg.textContent = `已更新 ✓（${Math.round(blob.size / 1024)} KB）`;
-  } catch (err) {
-    msg.textContent = ['permission-denied', 'storage/unauthorized'].includes(err.code) ? '失敗：這個帳號還沒有管理員權限'
-      : err.code?.startsWith('storage/') ? '失敗：照片空間還沒開通（Firebase Storage）' : '失敗：' + err.message;
-  } finally { e.target.value = ''; }
+    await saveAlbum(id);
+    old.forEach(g => g.path && ST.deleteObject(ST.ref(storage, g.path)).catch(() => {}));
+    renderSlot(id); slotMsg($(`.ph[data-slot="${id}"]`), `已加入 ${done} 張 ✓`);
+  } catch (err) { slotMsg(card, '儲存失敗：' + errText(err)); }
 });
 
 $('#photoGrid').addEventListener('click', async e => {
-  if (!e.target.matches('[data-rm]')) return;
-  const card = e.target.closest('.ph'), msg = card.querySelector('.ph-msg');
-  if (!confirm('移除這張照片？')) return;
-  try {
-    await ST.deleteObject(ST.ref(storage, `photos/${card.dataset.slot}.webp`)).catch(() => {});
-    await F.setDoc(F.doc(db, 'site', 'config'), { photos: { [card.dataset.slot]: F.deleteField() } }, { merge: true });
-    showPhoto(card, ''); msg.textContent = '已移除';
+  const b = e.target.closest('button'); if (!b) return;
+  const card = b.closest('.ph'), id = card.dataset.slot, list = albums[id] || [];
+  if (b.matches('[data-manage]')) { card.classList.toggle('open'); renderSlot(id); return; }
+  if (b.matches('[data-rmall]')) {
+    if (!confirm('移除這張照片？')) return;
+    const old = list.splice(0); await saveAlbum(id).catch(() => {}); old.forEach(g => g.path && ST.deleteObject(ST.ref(storage, g.path)).catch(() => {}));
+    renderSlot(id); return;
   }
-  catch (err) { msg.textContent = '失敗：' + err.message; }
+  if (b.dataset.move !== undefined) {
+    const i = Number(b.dataset.move), j = i + Number(b.dataset.d);
+    if (j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    await saveAlbum(id).catch(() => {}); renderSlot(id); slotMsg($(`.ph[data-slot="${id}"]`), j === 0 ? '已設為封面 ✓' : '順序已儲存 ✓');
+  } else if (b.dataset.del !== undefined) {
+    if (!confirm('刪除這張照片？')) return;
+    const [g] = list.splice(Number(b.dataset.del), 1);
+    await saveAlbum(id).catch(() => {}); if (g.path) ST.deleteObject(ST.ref(storage, g.path)).catch(() => {});
+    if (!list.length) card.classList.remove('open');
+    renderSlot(id);
+  }
 });
 
 /* ---------- IG Reels ---------- */
@@ -358,62 +403,4 @@ $('#reelRows').addEventListener('click', e => {
   else if (d.rmreel) r.splice(+d.rmreel, 1);
   else return;
   renderReels(); $('#saveMsg').textContent = '有修改，記得按儲存';
-});
-
-/* ---------- 相簿（作品集）：Storage photos/gallery/*.webp，清單存 site/config.gallery ---------- */
-let gallery = null;
-async function loadGallery() {
-  try { const snap = await F.getDoc(F.doc(db, 'site', 'config')); gallery = (snap.exists() && snap.data().gallery) || []; } catch { gallery = []; }
-  renderGallery();
-}
-function renderGallery() {
-  $('#galleryGrid').innerHTML = gallery.map((g, i) => `<div class="gal-item">
-    <div class="ph-img" style="background-image:url('${g.url}')"></div>
-    <input data-gcap="${i}" value="${esc(g.caption || '')}" placeholder="寫點說明（可留空）" maxlength="60">
-    <div class="gal-acts"><button data-gmove="${i}" data-d="-1" title="往前">←</button><button data-gmove="${i}" data-d="1" title="往後">→</button><button data-gdel="${i}" title="刪除">✕</button></div>
-  </div>`).join('') || '<p class="hint">還沒有照片</p>';
-  $('#galleryMsg').textContent = gallery.length ? `共 ${gallery.length} 張` : '';
-}
-async function saveGallery(msg) {
-  await F.setDoc(F.doc(db, 'site', 'config'), { gallery }, { merge: true });
-  if (msg) $('#galleryMsg').textContent = msg;
-}
-$('#galleryInput').addEventListener('change', async e => {
-  const files = [...e.target.files]; e.target.value = '';
-  if (!files.length) return;
-  if (!gallery) await loadGallery();
-  let done = 0;
-  for (const file of files) {
-    $('#galleryMsg').textContent = `上傳中 ${done + 1}/${files.length}…`;
-    try {
-      const blob = await compress(file, 1600);
-      const name = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-      const path = `photos/gallery/${name}.webp`;
-      const r = ST.ref(storage, path);
-      await ST.uploadBytes(r, blob, { contentType: 'image/webp', cacheControl: 'public, max-age=31536000' });
-      gallery.unshift({ url: await ST.getDownloadURL(r), path, caption: '' });
-      done++;
-    } catch (err) { $('#galleryMsg').textContent = `有一張失敗：${err.code === 'storage/unauthorized' ? '沒有權限' : err.message}`; }
-  }
-  renderGallery();
-  await saveGallery(`已上傳 ${done} 張 ✓`).catch(err => { $('#galleryMsg').textContent = '儲存失敗：' + err.message; });
-});
-$('#galleryGrid').addEventListener('change', async e => {
-  const i = e.target.dataset.gcap; if (i === undefined) return;
-  gallery[i].caption = e.target.value.trim();
-  await saveGallery('說明已儲存 ✓').catch(err => { $('#galleryMsg').textContent = '儲存失敗：' + err.message; });
-});
-$('#galleryGrid').addEventListener('click', async e => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.gmove !== undefined) {
-    const i = Number(b.dataset.gmove), j = i + Number(b.dataset.d);
-    if (j < 0 || j >= gallery.length) return;
-    [gallery[i], gallery[j]] = [gallery[j], gallery[i]];
-    renderGallery(); await saveGallery('順序已儲存 ✓').catch(() => {});
-  } else if (b.dataset.gdel !== undefined) {
-    if (!confirm('刪除這張照片？')) return;
-    const [g] = gallery.splice(Number(b.dataset.gdel), 1);
-    renderGallery(); await saveGallery('已刪除').catch(() => {});
-    if (g.path) ST.deleteObject(ST.ref(storage, g.path)).catch(() => {});
-  }
 });
