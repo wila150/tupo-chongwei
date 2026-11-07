@@ -225,5 +225,5 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
 /* ---------- 網站新預約 → 通知 ---------- */
 export const onBookingCreated = onDocumentCreated('bookings/{id}', async ev => {
   const b = ev.data?.data(); if (!b) return;
-  await notifyAdmins(`🥊 新的私人課預約（待確認）\n${md(b.date)} ${b.time}\n${b.name} ${b.phone}${b.people > 1 ? `・${b.people} 人` : ''}\n${(b.goals || []).join('、')}${b.note ? `\n📝 ${b.note}` : ''}\n👉 ${SITE}/admin.html`);
+  await notifyAdmins(`🥊 新的私人課預約（待確認）\n${md(b.date)} ${b.time}\n${b.name} ${b.phone}${b.people > 1 ? `・${b.people} 人` : ''}\n${(b.goals || []).join('、')}${b.note ? `\n📝 ${b.note}` : ''}\n👉 ${SITE}/admin`);
 });
