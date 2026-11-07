@@ -1,8 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
+    // 管理員：admins 底下有「uid」或「已驗證的 Email」為文件 ID 的資料
     function isAdmin() {
-      return request.auth != null && exists(/databases/$(db)/documents/admins/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(db)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email_verified == true && request.auth.token.email != null &&
+          exists(/databases/$(db)/documents/admins/$(request.auth.token.email))));
     }
     function str(v, max) { return v is string && v.size() <= max; }
 
@@ -36,8 +40,17 @@ service cloud.firestore {
       allow write: if isAdmin() && doc == 'config';
     }
 
+    // 學員名冊、扣堂紀錄、課表：只有管理員
+    match /students/{sid} {
+      allow read, write: if isAdmin();
+      match /ledger/{lid} { allow read, write: if isAdmin(); }
+    }
+    match /lessons/{lid} {
+      allow read, write: if isAdmin();
+    }
+
     match /admins/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && (request.auth.uid == uid || request.auth.token.email == uid);
       allow write: if false;
     }
   }

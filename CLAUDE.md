@@ -2,11 +2,13 @@
 
 純靜態網站（無 build）＋ Firebase（Hosting / Firestore / Auth）。
 
-- `public/index.html` 形象網站＋私人課預約；`public/admin.html` 教練後台（Email 登入，看／確認／取消預約）
+- `public/index.html` 形象網站＋私人課預約；`public/admin.html` 教練後台（Google 或 Email 登入）：預約／課務扣堂／學員／網站內容
+- `public/admin-crm.js` 課務扣堂＋學員名冊（第一階段）：`students/{id}`（credits 剩餘堂數）＋`ledger` 子集合、`lessons/{id}`（studentIds 多人、status scheduled|done|cancelled、doneAtMs 24h 內可復原）。網站預約按確認 → 依電話找/建學員＋建 `lessons/bk_{bookingId}`。第二階段（LINE 綁定、扣堂通知、課前提醒、學員查堂數頁，需 Cloud Functions）、第三階段（定型化契約、退費試算、報表、Google 行事曆）尚未做
+- 管理員：`admins/{uid}` 或 `admins/{已驗證 Email}` 有文件即可（firestore.rules／storage.rules 都認兩種）
 - 後台「網站內容」分頁可改聯絡方式、固定課表、私人課開放時段、休假日 → 存 Firestore `site/config`，前台載入後覆蓋 `data.js`（讀不到就用 data.js 預設）
 - `public/data.js` 預設資料：固定課表（取自海報 `../素材/20261107-180958_拳擊.jpg`）、聯絡方式（LINE @043ixcyx、IG _cwl1127._ 已填；電話待補）、私人課可預約時段
 - `public/firebase-config.js` 為 null 時是示範模式（預約不會存）
-- Firestore：`bookings`（學員只能 create）、`busy`（教練確認後寫入的時段，公開讀，前台用來灰掉已約時段）、`site/config`（網站內容，公開讀、管理員寫）、`admins/{uid}`（有這筆文件的帳號才是管理員，只能從 console 建）
+- Firestore：`bookings`（學員只能 create）、`busy`（教練確認後寫入的時段，公開讀，前台用來灰掉已約時段）、`site/config`（網站內容，公開讀、管理員寫）、`admins/{uid 或 Email}`（只能從 console 建）
 - IG Reels 作品集：後台「網站內容 → IG 影片」貼網址 → `site/config.reels`，前台 `#reels` 區塊（沒影片就隱藏），滑到附近才載入 instagram embed.js
 - 照片：後台「網站內容 → 照片」上傳（瀏覽器縮成 webp → Firebase Storage `photos/{coach,g1,g2,g3,hero}.webp`，下載網址存 `site/config.photos`；`storage.rules` 用 firestore.exists 檢查 admins），或放進 `public/img/` 用固定檔名
 - Logo 原稿在 `logo/`，定稿 `tupo-chongwei-v4.svg`（文字還沒轉曲線）

@@ -29,7 +29,23 @@ $('#loginForm').addEventListener('submit', async e => {
   catch { $('#loginError').textContent = '帳號或密碼錯誤'; }
 });
 $('#logout').addEventListener('click', () => A.signOut(auth));
+$('#googleLogin').addEventListener('click', async () => {
+  $('#loginError').textContent = '';
+  const provider = new A.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  try { await A.signInWithPopup(auth, provider); }
+  catch (err) {
+    if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/cancelled-popup-request'].includes(err.code)) return A.signInWithRedirect(auth, provider);
+    if (err.code !== 'auth/popup-closed-by-user') $('#loginError').textContent = 'Google 登入失敗：' + err.code;
+  }
+});
 
+let crm = null;
+async function startCrm() {
+  if (crm) return;
+  const { initCrm } = await import(`./admin-crm.js${new URL(import.meta.url).search}`);
+  crm = initCrm({ F, db, esc, $ });
+}
 A.onAuthStateChanged(auth, user => {
   $('#loginView').hidden = !!user;
   $('#appView').hidden = !user;
@@ -37,6 +53,7 @@ A.onAuthStateChanged(auth, user => {
   if (!user) return;
   const q = F.query(F.collection(db, 'bookings'), F.orderBy('date'));
   unsub = F.onSnapshot(q, snap => {
+    startCrm();
     all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
     render();
@@ -95,10 +112,12 @@ $('#list').addEventListener('click', async e => {
     if (btn.dataset.act === 'confirm') {
       batch.update(F.doc(db, 'bookings', b.id), { status: 'confirmed' });
       batch.set(slot, { date: b.date, time: b.time });
+      await crm?.bookingConfirmed(b, batch);
     } else {
       if (!confirm(`取消 ${b.name} 的預約？`)) { btn.disabled = false; return; }
       batch.update(F.doc(db, 'bookings', b.id), { status: 'cancelled' });
       if (b.status === 'confirmed') batch.delete(slot);
+      if (b.status === 'confirmed') crm?.bookingCancelled(b, batch);
     }
     await batch.commit();
   } catch (err) {
@@ -113,6 +132,8 @@ $('#views').addEventListener('click', e => {
   document.querySelectorAll('#views button').forEach(x => x.classList.toggle('active', x === b));
   $('#bookingsView').hidden = b.dataset.v !== 'bookings';
   $('#contentView').hidden = b.dataset.v !== 'content';
+  $('#lessonsView').hidden = b.dataset.v !== 'lessons';
+  $('#studentsView').hidden = b.dataset.v !== 'students';
   if (b.dataset.v === 'content' && !cfg) loadContent();
   if (b.dataset.v === 'content' && !photosLoaded) loadPhotos();
 });

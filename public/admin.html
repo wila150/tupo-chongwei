@@ -7,7 +7,7 @@
   <title>教練後台｜突破重圍</title>
   <link rel="icon" href="img/icon-192.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072039">
+  <link rel="stylesheet" href="styles.css?v=202611072053">
   <style>
     body { padding: 1.2rem 4% 4rem; }
     [hidden] { display: none !important; }
@@ -59,6 +59,37 @@
     .reel-row a { color: var(--paper); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--ink); border: 1px solid #333; border-radius: 8px; padding: .5rem .7rem; font-size: .9rem; }
     .reel-row button { background: none; border: 1px solid #444; color: var(--muted); border-radius: 8px; width: 38px; height: 38px; cursor: pointer; }
     .reel-row button:hover { color: var(--paper); border-color: var(--paper); }
+    .bar { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+    .inp { width: 100%; background: var(--ink); color: var(--paper); border: 1px solid #333; border-radius: 8px; padding: .55rem .7rem; font: inherit; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem 1rem; }
+    .days-pick input[type=checkbox] { display: none; }
+    .days-pick { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+    .days-pick > label > span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; border: 1px solid #3a3a3a; cursor: pointer; }
+    .days-pick input:checked + span { background: var(--red); border-color: var(--red); }
+    .picks { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; max-height: 220px; overflow: auto; }
+    .pick { border: 1px solid #3a3a3a; border-radius: 999px; padding: .35rem .9rem; cursor: pointer; }
+    .pick small { color: var(--muted); }
+    .pick.on { background: var(--red); border-color: var(--red); }
+    .pick.on small { color: #fff; }
+    .panel.alert { border-color: #f0b429; }
+    .cnt { font-family: var(--display); background: var(--red); border-radius: 999px; padding: 0 .55rem; margin-left: .5rem; font-size: .9rem; }
+    .tag { display: inline-block; font-size: .75rem; padding: .05rem .5rem; border-radius: 999px; background: #333; color: var(--paper); vertical-align: middle; }
+    .tag.warn { background: #f0b429; color: #111; font-weight: 700; }
+    .tag.ok { background: #2fbf71; color: #111; }
+    .st { background: var(--ink-2); border: 1px solid #2a2a2a; border-radius: 12px; padding: 1rem 1.2rem; display: grid; grid-template-columns: 1fr auto auto; gap: .6rem 1.2rem; align-items: center; }
+    .st-credits { text-align: center; min-width: 70px; }
+    .st-credits b { display: block; font-family: var(--display); font-size: 1.8rem; line-height: 1; }
+    .st-credits small { color: var(--muted); font-size: .75rem; }
+    .st-credits.low b { color: #f0b429; }
+    .st-acts { display: flex; gap: .4rem; flex-wrap: wrap; }
+    .st-acts .btn { padding: .35rem .9rem; font-size: .85rem; }
+    .st-log { grid-column: 1 / -1; border-top: 1px solid #2a2a2a; padding-top: .6rem; display: grid; gap: .3rem; }
+    .log { display: grid; grid-template-columns: 90px 1fr 50px 70px; gap: .6rem; font-size: .9rem; }
+    .log span:first-child, .log small { color: var(--muted); }
+    .log .neg { color: var(--red); } .log .pos { color: #2fbf71; }
+    .google-btn { display: flex; align-items: center; justify-content: center; gap: .6rem; width: 100%; background: #fff; color: #222; border: 0; border-radius: 999px; padding: .8rem; font: inherit; font-weight: 700; cursor: pointer; margin-bottom: 1rem; }
+    .or { text-align: center; color: var(--muted); font-size: .85rem; margin-bottom: .8rem; }
+    @media (max-width: 760px) { .grid3 { grid-template-columns: 1fr 1fr; } .st { grid-template-columns: 1fr auto; } .st-acts { grid-column: 1 / -1; } .log { grid-template-columns: 70px 1fr 40px; } .log small { display: none; } }
     .savebar { position: sticky; bottom: 0; background: rgba(14,14,14,.95); padding: 1rem 0; display: flex; gap: 1rem; align-items: center; border-top: 1px solid #2a2a2a; }
     .savebar .msg { color: var(--muted); }
     @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .cls { grid-template-columns: 1fr 1fr; padding: .8rem; border: 1px solid #2a2a2a; border-radius: 10px; } .cls-head { display: none; } .cls .del { grid-column: 1 / -1; } }
@@ -69,6 +100,8 @@
 <body>
   <div id="loginView" class="login" hidden>
     <h1>教練後台登入</h1>
+    <button type="button" class="google-btn" id="googleLogin"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>用 Google 登入</button>
+    <p class="or">或用 Email 密碼</p>
     <form id="loginForm">
       <label class="field">Email<input name="email" type="email" required autocomplete="username"></label>
       <label class="field">密碼<input name="password" type="password" required autocomplete="current-password"></label>
@@ -83,7 +116,9 @@
       <button class="btn btn-ghost btn-sm" id="logout">登出</button>
     </div>
     <div class="views" id="views">
-      <button data-v="bookings" class="active">預約管理</button>
+      <button data-v="bookings" class="active">預約</button>
+      <button data-v="lessons">課務扣堂</button>
+      <button data-v="students">學員</button>
       <button data-v="content">網站內容</button>
     </div>
     <div id="bookingsView">
@@ -94,6 +129,60 @@
       <button data-f="cancelled">已取消</button>
     </div>
     <div class="list" id="list"></div>
+    </div>
+
+    <div id="lessonsView" hidden>
+      <div class="bar"><button type="button" class="btn btn-sm" id="addLessonBtn">＋ 排課</button></div>
+      <form class="panel" id="lessonForm" hidden>
+        <h2>排課</h2>
+        <div class="grid3 num">
+          <label class="field">日期（重複排課時為開始日）<input type="date" id="lfDate" required></label>
+          <label class="field">時間<input type="time" id="lfTime" value="19:00" required></label>
+          <label class="field">分鐘<input type="number" id="lfMin" value="60" min="15" max="240" step="15"></label>
+        </div>
+        <p class="hint" style="margin:.8rem 0 .4rem">每週重複（不勾＝只排這一次）</p>
+        <div class="days-pick" id="lfDays">
+          <label><input type="checkbox" value="1"><span>一</span></label><label><input type="checkbox" value="2"><span>二</span></label>
+          <label><input type="checkbox" value="3"><span>三</span></label><label><input type="checkbox" value="4"><span>四</span></label>
+          <label><input type="checkbox" value="5"><span>五</span></label><label><input type="checkbox" value="6"><span>六</span></label>
+          <label><input type="checkbox" value="0"><span>日</span></label>
+          <label class="field" style="margin:0 0 0 .6rem;display:inline-flex;align-items:center;gap:.4rem">共<input type="number" id="lfWeeks" value="8" min="1" max="26" style="width:70px">週</label>
+        </div>
+        <p class="hint" style="margin:.8rem 0 .4rem">學員（可多選＝1 對 2、團體課，扣堂時每人各扣 1 堂）</p>
+        <input id="pickSearch" class="inp" placeholder="搜尋姓名或電話">
+        <div class="picks" id="pickList"></div>
+        <label class="field" style="margin-top:.8rem">備註<input id="lfNote" class="inp" maxlength="100"></label>
+        <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem"><button class="btn">建立</button><span class="muted" id="lfMsg"></span></div>
+      </form>
+      <div id="lessonsBody"></div>
+    </div>
+
+    <div id="studentsView" hidden>
+      <div class="bar">
+        <button type="button" class="btn btn-sm" id="addStudentBtn">＋ 新增學員</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="importBtn">從 Excel 匯入</button>
+        <input id="stSearch" class="inp" placeholder="搜尋姓名或電話" style="flex:1;min-width:160px">
+      </div>
+      <div class="panel" id="importBox" hidden>
+        <h2>從 Excel 匯入</h2>
+        <p class="hint">在 Excel 選取「姓名、電話、剩餘堂數、備註」這幾欄（照這個順序，備註可省略），複製後貼在下面。標題列會自動略過，電話重複的也會略過。</p>
+        <textarea id="importText" class="inp" rows="6" placeholder="王小明	0912345678	8&#10;陳小華	0987654321	3	週六班"></textarea>
+        <p class="muted" id="importPreview" style="margin:.6rem 0"></p>
+        <button type="button" class="btn btn-sm" id="importGo">匯入</button>
+      </div>
+      <form class="panel" id="stForm" hidden>
+        <h2 id="stFormTitle">新增學員</h2>
+        <div class="grid2">
+          <label class="field">姓名 *<input name="name" class="inp" maxlength="30" required></label>
+          <label class="field">電話<input name="phone" class="inp" inputmode="tel" maxlength="20"></label>
+          <label class="field">LINE ID<input name="lineId" class="inp" maxlength="40"></label>
+          <label class="field">目前剩餘堂數<input name="credits" class="inp" type="number" value="0"></label>
+        </div>
+        <label class="field">備註<input name="note" class="inp" maxlength="200"></label>
+        <div style="display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap"><button class="btn">儲存</button><button type="button" class="btn btn-ghost" id="stCancel">取消</button><button type="button" class="btn btn-ghost" id="stDelete" style="margin-left:auto;color:var(--red)">刪除學員</button></div>
+      </form>
+      <p class="muted" id="stSummary" style="margin-bottom:.8rem"></p>
+      <div class="list" id="stList"></div>
     </div>
 
     <div id="contentView" hidden>
@@ -155,7 +244,7 @@
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611072039"></script>
-  <script type="module" src="admin.js?v=202611072039"></script>
+  <script src="data.js?v=202611072053"></script>
+  <script type="module" src="admin.js?v=202611072053"></script>
 </body>
 </html>

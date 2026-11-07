@@ -220,3 +220,18 @@ details p { color: var(--muted); margin-top: .6rem; }
 .reels .instagram-media { min-width: 0 !important; width: 100% !important; margin: 0 !important; border-radius: 14px !important; }
 .reel-ph { display: grid; place-items: center; aspect-ratio: 9/16; background: var(--ink-2); border: 1px solid #2a2a2a; border-radius: 14px; color: var(--muted); }
 @media (min-width: 1100px) { .reels { justify-content: center; flex-wrap: wrap; overflow: visible; } }
+
+/* 側邊浮動 LINE／IG（跟著捲動） */
+.side-social { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: 40; display: flex; flex-direction: column; gap: .6rem; }
+.side-btn { position: relative; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.45); transition: transform .15s; }
+.side-btn:hover { transform: scale(1.08); }
+.side-btn svg { width: 28px; height: 28px; }
+.side-btn span { position: absolute; right: 62px; white-space: nowrap; background: rgba(14,14,14,.9); border: 1px solid #333; padding: .2rem .6rem; border-radius: 6px; font-size: .8rem; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.side-btn:hover span { opacity: 1; }
+.side-line { background: #06c755; }
+.side-ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+.side-btn.hidden { display: none; }
+@media (max-width: 760px) {
+  .side-social { top: auto; transform: none; bottom: 92px; right: 20px; }
+  .side-btn { width: 56px; height: 56px; }
+}
