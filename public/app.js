@@ -96,6 +96,7 @@ function renderDays() {
     const any = B.startTimes.some(t => slotState(d, t));
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'day'; btn.disabled = !any;
+    if (chosenDate && ymd(chosenDate) === ymd(d)) btn.classList.add('active');
     btn.innerHTML = `<small>${i === 0 ? '今天' : DAY[d.getDay()]}</small><b>${d.getDate()}</b><small>${d.getMonth() + 1}月</small>`;
     btn.addEventListener('click', () => {
       $$('.day', wrap).forEach(b => b.classList.remove('active'));
@@ -114,6 +115,8 @@ function renderSlots() {
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'slot'; btn.textContent = t;
     btn.disabled = !slotState(chosenDate, t);
+    if (btn.disabled && form.time.value === t) form.time.value = '';
+    if (form.time.value === t) btn.classList.add('active');
     btn.addEventListener('click', () => {
       $$('.slot', wrap).forEach(b => b.classList.remove('active'));
       btn.classList.add('active'); form.time.value = t;
@@ -173,4 +176,4 @@ $('#bookAgain').addEventListener('click', () => {
 });
 
 renderDays();
-loadBusy().then(() => { renderDays(); });
+loadBusy().then(() => { renderDays(); if (chosenDate) renderSlots(); });
