@@ -241,3 +241,12 @@ details p { color: var(--muted); margin-top: .6rem; }
 .book-only #booking { padding-top: 5.5rem; min-height: 100svh; }
 .book-only .quick-line { display: none; }
 .book-only .nav { background: rgba(14,14,14,.96); }
+
+/* 回頭客：個人資料收起來 */
+.welcome { display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: var(--ink-2); border: 1px solid var(--red); border-radius: var(--radius); padding: 1rem 1.3rem; }
+.welcome[hidden] { display: none; }
+.welcome b { display: block; font-size: 1.1rem; }
+.welcome small { color: var(--muted); }
+.booking.returning [data-profile] { display: none; }
+.booking.returning .step h3 span { display: none; }
+.welcome .btn { white-space: nowrap; flex: none; }

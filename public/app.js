@@ -197,6 +197,28 @@ function renderSlots() {
 
 function showError(msg) { $('#formError').textContent = msg; }
 
+/* ---------- 記住預約人：第一次填，之後直接選時間 ---------- */
+const PROFILE_KEY = 'tupo_profile_v1';
+const loadProfile = () => { try { return JSON.parse(localStorage.getItem(PROFILE_KEY)) || null; } catch { return null; } };
+function applyProfile() {
+  const pf = loadProfile();
+  if (!pf || !pf.name || !pf.phone) { form.classList.remove('returning'); $('#welcomeBar').hidden = true; return; }
+  form.name.value = pf.name; form.phone.value = pf.phone; form.lineId.value = pf.lineId || '';
+  if (pf.level) form.level.value = pf.level;
+  if (pf.who) form.who.value = pf.who;
+  if (pf.people) form.people.value = String(pf.people);
+  (pf.goals || []).forEach(g => { const c = form.querySelector(`input[name=goals][value="${CSS.escape(g)}"]`); if (c) c.checked = true; });
+  $('#welcomeName').textContent = `歡迎回來，${pf.name}！`;
+  $('#welcomeInfo').textContent = `${pf.phone}・${pf.level || ''}・${pf.who || ''}　直接選日期和時段就可以預約`;
+  $('#welcomeBar').hidden = false;
+  form.classList.add('returning');
+}
+$('#editProfile').addEventListener('click', () => {
+  form.classList.remove('returning'); $('#welcomeBar').hidden = true;
+  form.querySelector('[data-profile]').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+applyProfile();
+
 form.addEventListener('submit', async e => {
   e.preventDefault();
   showError('');
@@ -221,6 +243,7 @@ form.addEventListener('submit', async e => {
     } else {
       console.info('[demo] booking (Firebase 尚未設定)', data);
     }
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: data.name, phone: data.phone, lineId: data.lineId, level: data.level, who: data.who, people: data.people, goals: data.goals })); } catch {}
     const d = new Date(`${data.date}T00:00:00`);
     $('#doneSummary').textContent = `${data.name}，你預約了 ${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time} 的私人課。`;
     const msg = `教練你好，我在網站預約了私人課：\n${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time}\n${data.name} ${data.phone}`;
@@ -248,6 +271,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape') modal.hidden = true; 
 
 $('#bookAgain').addEventListener('click', () => {
   form.reset(); form.hidden = false; $('#bookingDone').hidden = true;
+  applyProfile();
   chosenDate = null; renderDays();
   $('#slotPicker').innerHTML = '<p class="muted">請先選擇日期</p>';
 });
