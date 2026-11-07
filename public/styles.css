@@ -178,3 +178,4 @@ details p { color: var(--muted); margin-top: .6rem; }
   .hero-tags { display: none; }
   .float-cta { display: grid; }
 }
+@media (min-width: 761px) { .days { flex-wrap: wrap; overflow: visible; } }

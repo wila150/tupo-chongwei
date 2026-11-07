@@ -9,3 +9,4 @@
 - 照片：放進 `public/img/` 用固定檔名就會自動顯示：`hero.jpg` `coach.jpg` `g1.jpg` `g2.jpg` `g3.jpg` `og.jpg`（分享縮圖 1200×630）
 - Logo 原稿在 `logo/`，定稿 `tupo-chongwei-v4.svg`（文字還沒轉曲線）
 - 本機預覽：`cd public && python3 -m http.server 8080`
+- 部署：`./deploy.sh`（會自動替 CSS/JS 換版本號，不要直接 firebase deploy）
