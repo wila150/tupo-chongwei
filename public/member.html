@@ -7,7 +7,7 @@
   <title>學員預約｜突破重圍</title>
   <link rel="icon" href="img/icon-192.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072215">
+  <link rel="stylesheet" href="styles.css?v=202611072220">
   <style>
     [hidden] { display: none !important; }
     body { padding: 0 0 calc(76px + env(safe-area-inset-bottom)); min-height: 100svh; }
@@ -83,19 +83,15 @@
     <section id="bindView" hidden>
       <div class="bind">
         <h2>嗨 <span id="lineName"></span>！</h2>
-        <p class="muted">第一次使用，請輸入在教練那邊登記的<b>姓名和手機</b>，綁定之後就能直接用 LINE 預約、扣堂。</p>
+        <p class="muted">第一次使用，留下<b>姓名和手機</b>就好，之後打開就能直接預約，不用再填。</p>
         <form id="bindForm" style="margin-top:1rem">
           <label class="field">姓名<input name="name" class="inp" required maxlength="30" autocomplete="name"></label>
           <label class="field" style="margin-top:.7rem">手機<input name="phone" class="inp" required inputmode="tel" maxlength="20" autocomplete="tel" placeholder="09xx-xxx-xxx"></label>
           <p class="err" id="bindErr"></p>
-          <button class="btn btn-block" style="margin-top:.4rem">綁定</button>
+          <button class="btn btn-block" style="margin-top:.4rem">開始預約</button>
         </form>
       </div>
-      <div class="bind">
-        <h2 style="font-size:1.1rem">還不是學員？</h2>
-        <p class="muted">先預約一堂私人課，教練確認後會幫你建立資料。</p>
-        <a class="btn btn-ghost btn-block" href="./?book" style="margin-top:.8rem">首次預約</a>
-      </div>
+
     </section>
 
     <!-- 預約 -->
@@ -153,7 +149,7 @@
   </div>
   <div class="toast" id="toast" hidden></div>
 
-  <script src="data.js?v=202611072215"></script>
-  <script type="module" src="member.js?v=202611072215"></script>
+  <script src="data.js?v=202611072220"></script>
+  <script type="module" src="member.js?v=202611072220"></script>
 </body>
 </html>

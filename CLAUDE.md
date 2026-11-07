@@ -23,3 +23,4 @@
 - 學員 LINE 預約 App：`public/member.html`＋`member.js`（LIFF `2012453936-jc7TPoii`）：綁定（姓名＋手機對學員）、週曆選時段→線上預約（伺服器扣 1 堂、lessons.paid=true、source=line、寫 busy）、我的課（上課前 12 小時可取消退堂）、方案（packages 公開讀）、我的（堂數紀錄）。後台：paid 的課完課不再扣、教練取消會退堂；教練排課也寫 busy
 - `functions/`（Node 22、asia-east1）：`api`（學員 App，用 LIFF ID token 向 LINE 驗證）、`lineWebhook`（「通知綁定 密碼」加入 `notify/config.lineUserIds`、「取消通知」、「查堂數」）、`onBookingCreated`（新預約通知）。設定在 `functions/.env`（不進 git）。部署：`firebase deploy --only functions`（第一次要先給 compute SA `roles/cloudbuild.builds.builder`）
 - 自動推播：`nightlyReminder` 每天 20:00（台灣）推明天的課提醒卡（✅準時到／🙋請假 postback → lessons.attend.{sid}，請假會通知管理員）並傳明日課表給管理員；`onLessonDone` 教練完課扣堂（非 paid）→ 傳剩餘堂數給學員
+- LINE 記住客人：學員 App 第一次留姓名＋手機 → `rememberLineUser`（電話對到舊學員就綁定，否則建 `prospect: true`、0 堂的新客人）；網站/LIFF 預約有 lineUserId 也會自動記住。0 堂的人在 App 按「申請預約」→ api `request` 建 pending booking（走預約單確認流程），我的課顯示待確認

@@ -87,6 +87,24 @@ async function studentByLine(uid) {
   return q.empty ? null : { id: q.docs[0].id, ref: q.docs[0].ref, ...q.docs[0].data() };
 }
 
+// 用 LINE 記住客人：先找已綁定的，再用電話找舊學員綁上，都沒有就建新客人（0 堂）
+async function rememberLineUser(uid, { name, phone, lineName, lineId }) {
+  const bound = await studentByLine(uid);
+  if (bound) return { student: bound, created: false };
+  const p = normPhone(phone);
+  const all = await db.collection('students').get();
+  const hit = all.docs.find(d => p && normPhone(d.data().phone) === p);
+  if (hit) {
+    if (hit.data().lineUserId && hit.data().lineUserId !== uid) throw httpErr(409, '這支手機已經綁定其他 LINE，請聯絡教練');
+    await hit.ref.update({ lineUserId: uid, lineName: lineName || '' });
+    return { student: { id: hit.id, ref: hit.ref, ...hit.data(), lineUserId: uid }, created: false };
+  }
+  const ref = db.collection('students').doc();
+  const data = { name, phone, lineId: lineId || '', note: 'LINE 新客人', credits: 0, prospect: true, lineUserId: uid, lineName: lineName || '', createdAt: FieldValue.serverTimestamp() };
+  await ref.set(data);
+  return { student: { id: ref.id, ref, ...data }, created: true };
+}
+
 async function siteConfig() {
   const s = await db.doc('site/config').get();
   const d = s.exists ? s.data() : {};
@@ -128,20 +146,19 @@ export const api = onRequest({ invoker: 'public', cors: [SITE, 'https://tupo-cho
         .map(l => ({ id: l.id, date: l.date, time: l.time, minutes: l.minutes || 60, paid: !!l.paid, canCancel: slotMs(l.date, l.time) - Date.now() > CANCEL_HOURS * 3600e3 && !!l.paid }));
       const led = await st.ref.collection('ledger').orderBy('at', 'desc').limit(30).get();
       const ledger = led.docs.map(d => { const x = d.data(); return { note: x.note || x.type, delta: x.delta || 0, at: x.at?.toMillis?.() || 0 }; });
-      return res.json({ bound: true, student: { name: st.name, credits: st.credits || 0, expiresAt: st.expiresAt || null, blocked: !!st.blocked }, lessons, ledger, cancelHours: CANCEL_HOURS });
+      const pq = await db.collection('bookings').where('lineUserId', '==', me.uid).get();
+      const pending = pq.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.status === 'pending' && b.date >= today)
+        .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).map(b => ({ id: b.id, date: b.date, time: b.time }));
+      return res.json({ bound: true, student: { name: st.name, credits: st.credits || 0, expiresAt: st.expiresAt || null, blocked: !!st.blocked, prospect: !!st.prospect }, lessons, pending, ledger, cancelHours: CANCEL_HOURS });
     }
 
     if (action === 'bind') {
       if (st) return res.json({ ok: true });
-      const phone = normPhone(req.body.phone), name = String(req.body.name || '').trim();
-      if (phone.length < 8 || !name) throw httpErr(400, '請填姓名和手機');
-      const all = await db.collection('students').get();
-      const hit = all.docs.find(d => normPhone(d.data().phone) === phone && d.data().name.replace(/\s/g, '') === name.replace(/\s/g, ''));
-      if (!hit) throw httpErr(404, '找不到這位學員。第一次上課請先用「首次預約」，或請教練幫你建立資料');
-      if (hit.data().lineUserId && hit.data().lineUserId !== me.uid) throw httpErr(409, '這位學員已經綁定其他 LINE，請聯絡教練');
-      await hit.ref.update({ lineUserId: me.uid, lineName: me.name });
-      notifyAdmins(`🔗 ${name} 綁定了 LINE 預約`).catch(() => {});
-      return res.json({ ok: true });
+      const phone = String(req.body.phone || '').trim(), name = String(req.body.name || '').trim().slice(0, 30);
+      if (normPhone(phone).length < 8 || !name) throw httpErr(400, '請填姓名和手機');
+      const r = await rememberLineUser(me.uid, { name, phone, lineName: me.name });
+      notifyAdmins(r.created ? `👋 新客人加入 LINE 預約：${name} ${phone}` : `🔗 ${r.student.name} 綁定了 LINE 預約`).catch(() => {});
+      return res.json({ ok: true, created: r.created });
     }
 
     if (!st) throw httpErr(403, '請先綁定學員資料');
@@ -169,6 +186,24 @@ export const api = onRequest({ invoker: 'public', cors: [SITE, 'https://tupo-cho
       push(me.uid, [card('✓ 預約成功・扣除 1 堂', [`${md(date)} ${time}`, `剩餘 ${left} 堂`, `上課前 ${CANCEL_HOURS} 小時前可在 App 取消並退回堂數`])]).catch(() => {});
       notifyAdmins(`📅 LINE 預約：${md(date)} ${time}\n${st.name}（剩 ${left} 堂）`).catch(() => {});
       return res.json({ ok: true, credits: left, lessonId: lessonRef.id });
+    }
+
+    if (action === 'request') {
+      const { date, time } = req.body;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) throw httpErr(400, '時間格式錯誤');
+      if (st.blocked) throw httpErr(403, '帳號暫停預約，請聯絡教練');
+      const cfg = await siteConfig();
+      const bad = slotOk(cfg, date, time); if (bad) throw httpErr(400, bad);
+      if ((await db.doc(`busy/${date}_${time.replace(':', '')}`).get()).exists) throw httpErr(409, '這個時段剛被約走了，請換一個時間');
+      const mine = await db.collection('bookings').where('lineUserId', '==', me.uid).get();
+      if (mine.docs.some(d => d.data().status === 'pending' && d.data().date === date && d.data().time === time)) throw httpErr(409, '這個時段已經申請過了，等教練確認喔');
+      if (mine.docs.filter(d => d.data().status === 'pending').length >= 3) throw httpErr(429, '已經有 3 筆待確認的預約，請等教練確認後再申請');
+      await db.collection('bookings').add({
+        goals: [], level: st.prospect ? '新客人' : '學員', who: '', people: 1, date, time,
+        name: st.name, phone: st.phone || '', lineId: st.lineId || '', note: String(req.body.note || '').slice(0, 200),
+        status: 'pending', source: 'line-app', lineUserId: me.uid, lineName: me.name, createdAt: FieldValue.serverTimestamp()
+      });
+      return res.json({ ok: true });
     }
 
     if (action === 'cancel') {
@@ -255,6 +290,7 @@ async function adminIds() {
 export const onBookingCreated = onDocumentCreated('bookings/{id}', async ev => {
   const b = ev.data?.data(); if (!b) return;
   b.id = ev.params.id;
+  if (b.lineUserId && b.phone) await rememberLineUser(b.lineUserId, { name: b.name, phone: b.phone, lineName: b.lineName, lineId: b.lineId }).catch(e => logger.warn('remember', e.message));
   if (b.lineUserId) await push(b.lineUserId, [bookingCard(b, { title: '📝 預約單已送出', color: '#d7262e', note: '教練確認後會再傳 LINE 通知你。要改時間或取消，直接在這裡傳訊息給教練。' })]);
   const card = bookingCard(b, { title: '🥊 新的預約（待確認）', color: '#d7262e', note: b.lineUserId ? '客人已綁 LINE，確認後會自動通知他' : '客人沒有從 LINE 預約，確認後請用電話聯絡',
     buttons: [pbBtn('✅ 確認', `bk=confirm&id=${b.id}`, '#2fbf71'), pbBtn('❌ 婉拒', `bk=reject&id=${b.id}`)] });

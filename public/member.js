@@ -14,7 +14,7 @@ const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m;
 const addMin = (t, n) => { const m = toMin(t) + n; return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-let idToken = null, me = null, cfg = null, busy = new Set(), packages = [];
+let idToken = null, me = null, cfg = null, busy = new Set(), packages = [], pendingSet = new Set();
 
 function toast(msg) {
   const t = $('#toast'); t.textContent = msg; t.hidden = false;
@@ -88,10 +88,11 @@ function renderSlots() {
   const credits = me?.student?.credits ?? 0;
   $('#slotList').innerHTML = list.map(({ t, st }) => `<div class="slot-card ${st === 'full' ? 'full' : ''}">
       <div class="t">${t}<small>– ${addMin(t, mins)}</small></div>
-      <div><h4>私人課・一對一</h4><p>呂淙維 教練</p><span class="chip">使用 1 堂</span></div>
+      <div><h4>私人課・一對一</h4><p>呂淙維 教練</p><span class="chip">${credits > 0 ? '使用 1 堂' : '教練確認後安排'}</span></div>
       ${st === 'full' ? '<button class="btn btn-ghost" disabled>已額滿</button>'
+        : pendingSet.has(`${ymd(chosen)} ${t}`) ? '<button class="btn btn-ghost" disabled>待確認</button>'
         : credits > 0 ? `<button class="btn" data-book="${t}">線上預約</button>`
-        : '<button class="btn btn-ghost" data-go="plans">堂數不足</button>'}
+        : `<button class="btn btn-ghost req" data-book="${t}">申請預約</button>`}
     </div>`).join('') || '<p class="center-box" style="padding-top:3rem">這天沒有可預約的時段</p>';
 }
 
@@ -104,8 +105,12 @@ $('#slotList').addEventListener('click', e => {
   const t = e.target.dataset.book; if (!t) return;
   pending = { date: ymd(chosen), time: t };
   const c = me.student.credits;
+  pending.mode = c > 0 ? 'book' : 'request';
   $('#sheetWhen').textContent = `${md(pending.date)} ${t}`;
-  $('#sheetInfo').textContent = `私人課 ${cfg.booking.lessonMinutes || 60} 分鐘，將使用 1 堂（剩 ${c} → ${c - 1} 堂）。上課前 ${me.cancelHours} 小時前可以取消並退回。`;
+  $('#sheetInfo').textContent = c > 0
+    ? `私人課 ${cfg.booking.lessonMinutes || 60} 分鐘，將使用 1 堂（剩 ${c} → ${c - 1} 堂）。上課前 ${me.cancelHours} 小時前可以取消並退回。`
+    : `送出後教練會確認時間，結果會傳 LINE 通知你。${me.student.prospect ? '第一次上課的費用可以現場或跟教練確認。' : '目前沒有剩餘堂數，可以先跟教練購買方案。'}`;
+  $('#sheetYes').textContent = c > 0 ? '確認預約' : '送出申請';
   $('#sheetErr').textContent = ''; $('#sheet').hidden = false;
 });
 $('#sheetNo').addEventListener('click', () => { $('#sheet').hidden = true; });
@@ -113,13 +118,19 @@ $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') $('#sh
 $('#sheetYes').addEventListener('click', async () => {
   const btn = $('#sheetYes'); btn.disabled = true; btn.textContent = '預約中…';
   try {
-    const r = await call('book', pending);
-    busy.add(`${pending.date} ${pending.time}`);
-    $('#sheet').hidden = true;
-    toast(`✓ 扣除 1 堂，預約成功（剩 ${r.credits} 堂）`);
+    if (pending.mode === 'request') {
+      await call('request', pending);
+      $('#sheet').hidden = true;
+      toast('✓ 已送出，教練確認後會 LINE 通知你');
+    } else {
+      const r = await call('book', pending);
+      busy.add(`${pending.date} ${pending.time}`);
+      $('#sheet').hidden = true;
+      toast(`✓ 扣除 1 堂，預約成功（剩 ${r.credits} 堂）`);
+    }
     await refreshMe();
   } catch (err) { $('#sheetErr').textContent = err.message; if (/約走/.test(err.message)) { busy.add(`${pending.date} ${pending.time}`); renderSlots(); } }
-  btn.disabled = false; btn.textContent = '確認預約';
+  btn.disabled = false; btn.textContent = pending?.mode === 'request' ? '送出申請' : '確認預約';
 });
 
 /* ---------- 我的課 / 我的 / 方案 ---------- */
@@ -128,8 +139,9 @@ function renderMe() {
   $('#creditNum').textContent = s.credits; $('#creditPill').hidden = false;
   $('#meCredits').textContent = s.credits;
   $('#meExp').textContent = s.expiresAt ? s.expiresAt.slice(5).replace('-', '/') : '不限期';
-  $('#lessonList').innerHTML = me.lessons.map(l => `<div class="les"><div><b>${md(l.date)} ${l.time}</b><small>私人課 ${l.minutes} 分${l.paid ? '・已扣堂' : '・教練安排'}</small></div>
-    ${l.canCancel ? `<button class="btn btn-ghost" data-cancel="${l.id}">取消</button>` : ''}</div>`).join('') || '<p class="muted">目前沒有預約，去「預約」選個時間吧！</p>';
+  pendingSet = new Set((me.pending || []).map(p => `${p.date} ${p.time}`));
+  $('#lessonList').innerHTML = (me.pending || []).map(p => `<div class="les" style="border-left-color:#f0b429"><div><b>${md(p.date)} ${p.time}</b><small>等待教練確認</small></div></div>`).join('') + me.lessons.map(l => `<div class="les"><div><b>${md(l.date)} ${l.time}</b><small>私人課 ${l.minutes} 分${l.paid ? '・已扣堂' : '・教練安排'}</small></div>
+    ${l.canCancel ? `<button class="btn btn-ghost" data-cancel="${l.id}">取消</button>` : ''}</div>`).join('') + ((me.pending || []).length || me.lessons.length ? '' : '<p class="muted">目前沒有預約，去「預約」選個時間吧！</p>');
   $('#cancelNote').textContent = `線上預約的課，上課前 ${me.cancelHours} 小時前可以自己取消並退回堂數；之後請直接聯絡教練。`;
   $('#ledgerList').innerHTML = me.ledger.map(x => { const d = new Date(x.at); return `<div class="row-log"><span>${x.at ? `${d.getMonth() + 1}/${d.getDate()}` : ''}</span><span>${esc(x.note)}</span><b class="${x.delta < 0 ? 'neg' : 'pos'}">${x.delta > 0 ? '+' : ''}${x.delta || ''}</b></div>`; }).join('') || '<p class="muted">還沒有紀錄</p>';
   renderSlots();
@@ -181,7 +193,7 @@ $('#bindForm').addEventListener('submit', async e => {
   const btn = f.querySelector('button'); btn.disabled = true;
   try {
     await call('bind', { name: f.name.value, phone: f.phone.value });
-    await refreshMe(); go('book'); toast('綁定完成！');
+    await refreshMe(); go('book'); toast(me.student?.prospect ? '已記住你的資料，選個時間吧！' : `歡迎回來 ${me.student?.name || ''}！剩 ${me.student?.credits ?? 0} 堂`);
   } catch (err) { $('#bindErr').textContent = err.message; }
   btn.disabled = false;
 });
