@@ -21,13 +21,6 @@ const storage = ST.getStorage(app);
 
 let all = [], filter = 'pending', unsub = null;
 
-$('#loginForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  $('#loginError').textContent = '';
-  const f = new FormData(e.target);
-  try { await A.signInWithEmailAndPassword(auth, f.get('email'), f.get('password')); }
-  catch { $('#loginError').textContent = '帳號或密碼錯誤'; }
-});
 $('#logout').addEventListener('click', () => A.signOut(auth));
 $('#googleLogin').addEventListener('click', async () => {
   $('#loginError').textContent = '';
