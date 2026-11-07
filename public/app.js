@@ -33,6 +33,7 @@ if (db) {
       if (d.booking) Object.assign(S.booking, d.booking);
       if (Array.isArray(d.closedDates)) S.closedDates = d.closedDates;
       if (d.photos) S.photos = d.photos;
+      if (Array.isArray(d.reels)) S.reels = d.reels;
     }
   } catch (e) { console.warn('site config not loaded, using data.js', e); }
 }
@@ -84,6 +85,27 @@ $('#scheduleList').innerHTML = [...S.classes]
       <div class="class-name">${c.venue} ${c.name}</div>
       <div class="class-place">${c.place}</div></div>
     </div>`).join('');
+
+/* ---------- IG Reels 作品集（後台設定；沒有影片就整區隱藏） ---------- */
+const reels = (S.reels || []).filter(u => /^https:\/\/www\.instagram\.com\/(reel|p)\/[\w-]+\/$/.test(u));
+if (reels.length) {
+  $('#reels').hidden = false;
+  $$('[data-reels-link]').forEach(a => a.hidden = false);
+  $('#reelList').innerHTML = reels.map(u => `<div class="reel">
+    <blockquote class="instagram-media" data-instgrm-permalink="${u}?utm_source=ig_embed" data-instgrm-version="14">
+      <a href="${u}" target="_blank" rel="noopener" class="reel-ph">在 Instagram 觀看</a>
+    </blockquote></div>`).join('');
+  // 滑到附近才載入 IG 的嵌入程式，不拖慢首頁
+  const rio = new IntersectionObserver(es => {
+    if (!es.some(e => e.isIntersecting)) return;
+    rio.disconnect();
+    const sc = document.createElement('script');
+    sc.async = true; sc.src = 'https://www.instagram.com/embed.js';
+    sc.onload = () => window.instgrm?.Embeds.process();
+    document.body.appendChild(sc);
+  }, { rootMargin: '600px' });
+  rio.observe($('#reels'));
+}
 
 /* ---------- reveal on scroll ---------- */
 $$('.card, .about-photo, .about-text, .gallery .photo-slot, details').forEach(el => el.classList.add('reveal'));

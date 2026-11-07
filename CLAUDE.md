@@ -7,6 +7,7 @@
 - `public/data.js` 預設資料：固定課表（取自海報 `../素材/20261107-180958_拳擊.jpg`）、聯絡方式（LINE @043ixcyx、IG _cwl1127._ 已填；電話待補）、私人課可預約時段
 - `public/firebase-config.js` 為 null 時是示範模式（預約不會存）
 - Firestore：`bookings`（學員只能 create）、`busy`（教練確認後寫入的時段，公開讀，前台用來灰掉已約時段）、`site/config`（網站內容，公開讀、管理員寫）、`admins/{uid}`（有這筆文件的帳號才是管理員，只能從 console 建）
+- IG Reels 作品集：後台「網站內容 → IG 影片」貼網址 → `site/config.reels`，前台 `#reels` 區塊（沒影片就隱藏），滑到附近才載入 instagram embed.js
 - 照片：後台「網站內容 → 照片」上傳（瀏覽器縮成 webp → Firebase Storage `photos/{coach,g1,g2,g3,hero}.webp`，下載網址存 `site/config.photos`；`storage.rules` 用 firestore.exists 檢查 admins），或放進 `public/img/` 用固定檔名
 - Logo 原稿在 `logo/`，定稿 `tupo-chongwei-v4.svg`（文字還沒轉曲線）
 - 本機預覽：`cd public && python3 -m http.server 8080`

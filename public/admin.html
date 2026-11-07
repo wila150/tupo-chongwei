@@ -7,7 +7,7 @@
   <title>教練後台｜突破重圍</title>
   <link rel="icon" href="img/icon-192.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072037">
+  <link rel="stylesheet" href="styles.css?v=202611072039">
   <style>
     body { padding: 1.2rem 4% 4rem; }
     [hidden] { display: none !important; }
@@ -55,6 +55,10 @@
     .ph-body small { color: var(--muted); }
     .ph-actions { display: flex; gap: .4rem; }
     .ph-actions .btn { padding: .35rem .9rem; font-size: .85rem; }
+    .reel-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: .4rem; align-items: center; margin-bottom: .4rem; }
+    .reel-row a { color: var(--paper); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--ink); border: 1px solid #333; border-radius: 8px; padding: .5rem .7rem; font-size: .9rem; }
+    .reel-row button { background: none; border: 1px solid #444; color: var(--muted); border-radius: 8px; width: 38px; height: 38px; cursor: pointer; }
+    .reel-row button:hover { color: var(--paper); border-color: var(--paper); }
     .savebar { position: sticky; bottom: 0; background: rgba(14,14,14,.95); padding: 1rem 0; display: flex; gap: 1rem; align-items: center; border-top: 1px solid #2a2a2a; }
     .savebar .msg { color: var(--muted); }
     @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .cls { grid-template-columns: 1fr 1fr; padding: .8rem; border: 1px solid #2a2a2a; border-radius: 10px; } .cls-head { display: none; } .cls .del { grid-column: 1 / -1; } }
@@ -130,6 +134,17 @@
       </div>
 
       <div class="panel">
+        <h2>IG 影片（作品集）</h2>
+        <p class="hint">在 IG 的 Reels 按「分享 → 複製連結」，貼到下面按加入。網站會照這個順序排；沒有影片時這區不會出現。改完記得按最下面的儲存。</p>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem">
+          <input id="reelUrl" placeholder="https://www.instagram.com/reel/..." style="flex:1;min-width:220px;background:var(--ink);color:var(--paper);border:1px solid #333;border-radius:8px;padding:.55rem .7rem;font:inherit">
+          <button type="button" class="btn btn-ghost btn-sm" id="addReel" style="padding:.5rem 1.2rem">加入</button>
+        </div>
+        <p class="form-error" id="reelErr"></p>
+        <div id="reelRows"></div>
+      </div>
+
+      <div class="panel">
         <h2>照片</h2>
         <p class="hint">選好照片會自動縮圖並<b>馬上更新到網站</b>（不用按下面的儲存）。建議用橫的照片。</p>
         <div class="photos" id="photoGrid"></div>
@@ -140,7 +155,7 @@
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611072037"></script>
-  <script type="module" src="admin.js?v=202611072037"></script>
+  <script src="data.js?v=202611072039"></script>
+  <script type="module" src="admin.js?v=202611072039"></script>
 </body>
 </html>

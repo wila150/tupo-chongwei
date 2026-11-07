@@ -131,11 +131,12 @@ async function loadContent() {
       contact: { ...base.contact, ...(d.contact || {}) },
       classes: d.classes || base.classes,
       booking: { ...base.booking, ...(d.booking || {}) },
-      closedDates: d.closedDates || []
+      closedDates: d.closedDates || [],
+      reels: d.reels || base.reels || []
     };
   } catch (err) {
     console.warn(err);
-    cfg = { contact: base.contact, classes: base.classes, booking: base.booking, closedDates: [] };
+    cfg = { contact: base.contact, classes: base.classes, booking: base.booking, closedDates: [], reels: base.reels || [] };
     $('#saveMsg').textContent = '（目前顯示網站預設內容）';
   }
   renderContent();
@@ -145,7 +146,7 @@ function renderContent() {
   $('#cLineOA').value = cfg.contact.lineOA || '';
   $('#cIg').value = cfg.contact.instagram || '';
   $('#cPhone').value = cfg.contact.phone || '';
-  renderClasses(); renderTimes(); renderOff();
+  renderClasses(); renderTimes(); renderOff(); renderReels();
   $('#bDays').value = cfg.booking.daysAhead;
   $('#bMinH').value = cfg.booking.minHoursAhead;
   $('#bBuf').value = cfg.booking.bufferMinutes;
@@ -216,6 +217,7 @@ $('#saveContent').addEventListener('click', async () => {
     classes: cfg.classes.map(c => ({ day: c.day, start: c.start, end: c.end, venue: c.venue.trim(), name: c.name.trim(), place: c.place.trim() })),
     booking: { ...cfg.booking, daysAhead: num('#bDays', 1, 90), minHoursAhead: num('#bMinH', 0, 168), bufferMinutes: num('#bBuf', 0, 180) },
     closedDates: cfg.closedDates,
+    reels: cfg.reels,
     updatedAt: F.serverTimestamp()
   };
   btn.disabled = true; msg.textContent = '儲存中…';
@@ -294,4 +296,33 @@ $('#photoGrid').addEventListener('click', async e => {
     showPhoto(card, ''); msg.textContent = '已移除';
   }
   catch (err) { msg.textContent = '失敗：' + err.message; }
+});
+
+/* ---------- IG Reels ---------- */
+function normReel(u) {
+  const m = /instagram\.com\/(?:[\w.]+\/)?(reel|reels|p)\/([\w-]+)/.exec(u.trim());
+  return m ? `https://www.instagram.com/${m[1] === 'p' ? 'p' : 'reel'}/${m[2]}/` : null;
+}
+function renderReels() {
+  $('#reelRows').innerHTML = cfg.reels.map((u, i) => `<div class="reel-row">
+    <a href="${esc(u)}" target="_blank" rel="noopener">${i + 1}. ${esc(u.replace('https://www.instagram.com', ''))}</a>
+    <button type="button" data-up="${i}" title="往前" ${i === 0 ? 'disabled' : ''}>↑</button>
+    <button type="button" data-down="${i}" title="往後" ${i === cfg.reels.length - 1 ? 'disabled' : ''}>↓</button>
+    <button type="button" data-rmreel="${i}" title="刪除">✕</button></div>`).join('') || '<p class="hint">還沒有影片</p>';
+}
+$('#addReel').addEventListener('click', () => {
+  const u = normReel($('#reelUrl').value);
+  $('#reelErr').textContent = '';
+  if (!u) { $('#reelErr').textContent = '這不是 IG 貼文或 Reels 的網址'; return; }
+  if (cfg.reels.includes(u)) { $('#reelErr').textContent = '這支已經在清單裡了'; return; }
+  cfg.reels.push(u); $('#reelUrl').value = ''; renderReels();
+  $('#saveMsg').textContent = '有修改，記得按儲存';
+});
+$('#reelRows').addEventListener('click', e => {
+  const d = e.target.dataset, r = cfg.reels;
+  if (d.up) { const i = +d.up; [r[i - 1], r[i]] = [r[i], r[i - 1]]; }
+  else if (d.down) { const i = +d.down; [r[i + 1], r[i]] = [r[i], r[i + 1]]; }
+  else if (d.rmreel) r.splice(+d.rmreel, 1);
+  else return;
+  renderReels(); $('#saveMsg').textContent = '有修改，記得按儲存';
 });

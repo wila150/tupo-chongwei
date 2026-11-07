@@ -7,6 +7,9 @@ window.SITE = {
     phone: ''        // 例：0912345678 （待補）
   },
 
+  // IG Reels 作品集（後台「網站內容」可改），例：'https://www.instagram.com/reel/XXXX/'
+  reels: [],
+
   // 固定課表（取自海報）。day: 0=週日 1=週一 ... 6=週六
   classes: [
     { day: 1, start: '10:30', end: '11:30', venue: '拳拳格鬥', name: '拳擊課', place: '台中' },

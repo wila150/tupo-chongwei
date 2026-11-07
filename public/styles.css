@@ -212,3 +212,11 @@ details p { color: var(--muted); margin-top: .6rem; }
 .soc-mini { display: inline-flex; align-items: center; gap: .35rem; }
 .soc-mini svg { width: 18px; height: 18px; }
 .nav:not(.scrolled) .nav-links a:not(.btn) { text-shadow: 0 1px 10px rgba(0,0,0,.9); }
+
+/* IG Reels 作品集 */
+.reels-section { border-top: 1px solid #222; }
+.reels { display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2rem 0 1rem; }
+.reels .reel { flex: none; width: 340px; max-width: 86vw; scroll-snap-align: start; }
+.reels .instagram-media { min-width: 0 !important; width: 100% !important; margin: 0 !important; border-radius: 14px !important; }
+.reel-ph { display: grid; place-items: center; aspect-ratio: 9/16; background: var(--ink-2); border: 1px solid #2a2a2a; border-radius: 14px; color: var(--muted); }
+@media (min-width: 1100px) { .reels { justify-content: center; flex-wrap: wrap; overflow: visible; } }
