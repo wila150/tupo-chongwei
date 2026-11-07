@@ -3,5 +3,5 @@
 set -e
 cd "$(dirname "$0")"
 v=$(date +%Y%m%d%H%M)
-sed -i -E "s/(styles\.css|data\.js|app\.js|admin\.js|member\.js)(\?v=[0-9]+)?\"/\1?v=$v\"/g" public/index.html public/admin.html public/member.html
+sed -i -E "s/(styles\.css|data\.js|app\.js|admin\.js|member\.js)(\?v=[0-9]+)?\"/\1?v=$v\"/g" public/index.html public/admin.html public/member.html public/guide.html
 firebase deploy --only hosting --project tupo-chongwei

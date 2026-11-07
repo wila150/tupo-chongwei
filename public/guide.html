@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>使用說明書｜突破重圍 預約系統</title>
+  <link rel="icon" href="img/icon-192.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=202611072238">
+  <style>
+    body { background: var(--ink); }
+    .g-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.2rem 5rem; }
+    .g-head { display: flex; align-items: center; gap: 1rem; padding-bottom: 1.4rem; border-bottom: 1px solid #222; margin-bottom: 1.6rem; }
+    .g-head img { width: 64px; height: 64px; }
+    .g-head h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1.3; }
+    .g-head p { color: var(--muted); }
+    .toc { background: var(--ink-2); border: 1px solid #2a2a2a; border-radius: 16px; padding: 1.1rem 1.3rem; margin-bottom: 2rem; columns: 2 220px; }
+    .toc a { display: block; padding: .3rem 0; color: var(--paper); }
+    .toc a:hover { color: var(--red); }
+    .toc b { color: var(--red); font-family: var(--display); margin-right: .4rem; }
+    section.g { margin-bottom: 2.6rem; scroll-margin-top: 1rem; }
+    section.g > h2 { display: flex; align-items: center; gap: .6rem; font-size: 1.4rem; margin-bottom: .9rem; }
+    section.g > h2 span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--red); font-family: var(--display); font-size: 1rem; flex: none; }
+    h3 { font-size: 1.08rem; margin: 1.3rem 0 .5rem; }
+    p, li { color: #ddd6cc; }
+    ol.steps { counter-reset: s; list-style: none; padding: 0; display: grid; gap: .55rem; }
+    ol.steps li { counter-increment: s; position: relative; padding: .7rem .9rem .7rem 3rem; background: var(--ink-2); border: 1px solid #262626; border-radius: 12px; }
+    ol.steps li::before { content: counter(s); position: absolute; left: .8rem; top: .7rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: #2a2a2a; color: #fff; font-family: var(--display); display: grid; place-items: center; font-size: .85rem; }
+    ul.dots { padding-left: 1.2rem; display: grid; gap: .35rem; }
+    .tip { background: rgba(240,180,41,.1); border: 1px solid rgba(240,180,41,.4); border-radius: 12px; padding: .8rem 1rem; margin: .8rem 0; }
+    .tip b { color: #f0b429; }
+    .warn { background: rgba(215,38,46,.1); border-color: rgba(215,38,46,.45); }
+    .warn b { color: #ff6b6b; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .card-g { background: var(--ink-2); border: 1px solid #2a2a2a; border-radius: 16px; padding: 1.1rem 1.2rem; }
+    .card-g h3 { margin-top: 0; }
+    kbd { background: #2a2a2a; border: 1px solid #3a3a3a; border-bottom-width: 3px; border-radius: 6px; padding: .05rem .45rem; font-family: inherit; font-size: .9em; color: #fff; white-space: nowrap; }
+    .menu6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: #2a2a2a; border-radius: 12px; overflow: hidden; margin: .8rem 0; }
+    .menu6 div { background: #161616; padding: .8rem .6rem; text-align: center; font-size: .88rem; }
+    .menu6 div b { display: block; font-size: .98rem; margin-bottom: .2rem; }
+    .menu6 div:first-child { background: linear-gradient(135deg, #d7262e, #a8161d); }
+    table.g-t { width: 100%; border-collapse: collapse; margin: .6rem 0; font-size: .95rem; }
+    .g-t th, .g-t td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid #262626; vertical-align: top; }
+    .g-t th { color: var(--muted); font-weight: 700; white-space: nowrap; }
+    .g-link { color: var(--red); word-break: break-all; }
+    .top-btn { position: fixed; right: 16px; bottom: 16px; width: 46px; height: 46px; border-radius: 50%; background: var(--red); color: #fff; display: grid; place-items: center; font-size: 1.3rem; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+    @media (max-width: 640px) { .two { grid-template-columns: 1fr; } }
+    @media print {
+      body { background: #fff; } * { color: #111 !important; }
+      .toc, .card-g, ol.steps li, .tip, .menu6 div { background: #fff !important; border-color: #ccc !important; }
+      .top-btn { display: none; } section.g { break-inside: avoid-page; }
+    }
+  </style>
+</head>
+<body>
+<div class="g-wrap">
+  <header class="g-head">
+    <img src="img/logo-bear.png" alt="">
+    <div><h1>突破重圍 預約系統<br>使用說明書</h1><p>給教練的操作手冊：後台、LINE 通知、學員怎麼預約</p></div>
+  </header>
+
+  <nav class="toc">
+    <a href="#s1"><b>1</b>重要網址</a>
+    <a href="#s2"><b>2</b>把後台加到手機主畫面</a>
+    <a href="#s3"><b>3</b>登入後台</a>
+    <a href="#s4"><b>4</b>開啟 LINE 通知</a>
+    <a href="#s5"><b>5</b>每天的流程</a>
+    <a href="#s6"><b>6</b>確認網站預約</a>
+    <a href="#s7"><b>7</b>排課與完課扣堂</a>
+    <a href="#s8"><b>8</b>學員與課程方案</a>
+    <a href="#s9"><b>9</b>修改網站內容與照片</a>
+    <a href="#s10"><b>10</b>報表</a>
+    <a href="#s11"><b>11</b>學員怎麼用 LINE 預約</a>
+    <a href="#s12"><b>12</b>常見問題</a>
+  </nav>
+
+  <section class="g" id="s1">
+    <h2><span>1</span>重要網址</h2>
+    <table class="g-t">
+      <tr><th>官方網站</th><td><a class="g-link" href="https://tupo-chongwei.web.app">tupo-chongwei.web.app</a></td></tr>
+      <tr><th>教練後台</th><td><a class="g-link" href="https://tupo-chongwei.web.app/admin">tupo-chongwei.web.app/admin</a></td></tr>
+      <tr><th>LINE 官方帳號</th><td>突破Boxing（<a class="g-link" href="https://line.me/R/ti/p/@043ixcyx">@043ixcyx</a>）</td></tr>
+      <tr><th>這份說明書</th><td><a class="g-link" href="https://tupo-chongwei.web.app/guide">tupo-chongwei.web.app/guide</a></td></tr>
+    </table>
+  </section>
+
+  <section class="g" id="s2">
+    <h2><span>2</span>把後台加到手機主畫面</h2>
+    <p>加到主畫面後，桌面會出現熊頭像圖示，點開就是全螢幕的「教練後台」，用起來跟 App 一樣。</p>
+    <div class="two">
+      <div class="card-g">
+        <h3>iPhone（一定要用 Safari）</h3>
+        <ol class="steps">
+          <li>用 <b>Safari</b> 打開 <span class="g-link">tupo-chongwei.web.app/admin</span></li>
+          <li>點下方中間的 <kbd>分享</kbd>（方框加向上箭頭）</li>
+          <li>往下滑，點 <kbd>加入主畫面</kbd></li>
+          <li>名稱保留「教練後台」，按右上角 <kbd>加入</kbd></li>
+        </ol>
+      </div>
+      <div class="card-g">
+        <h3>Android（用 Chrome）</h3>
+        <ol class="steps">
+          <li>用 <b>Chrome</b> 打開 <span class="g-link">tupo-chongwei.web.app/admin</span></li>
+          <li>點右上角 <kbd>⋮</kbd></li>
+          <li>點 <kbd>加到主畫面</kbd> 或 <kbd>安裝應用程式</kbd></li>
+          <li>按 <kbd>安裝</kbd>／<kbd>新增</kbd></li>
+        </ol>
+      </div>
+    </div>
+    <div class="tip"><b>小提醒：</b>不要在 LINE、IG 裡面直接加入。在 LINE 裡點後台連結，系統會自動跳到 Safari／Chrome，再照上面步驟加入就可以。</div>
+  </section>
+
+  <section class="g" id="s3">
+    <h2><span>3</span>登入後台</h2>
+    <ol class="steps">
+      <li>打開後台（主畫面圖示或網址）</li>
+      <li>按 <kbd>用 Google 登入</kbd>，選教練的 Gmail（boxing911127@gmail.com）</li>
+      <li>登入後會看到「總覽」，之後同一支手機會一直保持登入</li>
+    </ol>
+    <div class="tip warn"><b>注意：</b>只有被設定為管理員的 Gmail 能看到資料。換別的帳號登入會顯示「沒有管理權限」，要新增管理員請聯絡網站管理員。</div>
+  </section>
+
+  <section class="g" id="s4">
+    <h2><span>4</span>開啟 LINE 通知（只要做一次）</h2>
+    <ol class="steps">
+      <li>用教練自己的 LINE，打開「突破Boxing」官方帳號的聊天室</li>
+      <li>傳送 <kbd>通知綁定 密碼</kbd>（密碼請向網站管理員索取，中間空一格）</li>
+      <li>收到「✅ 綁定完成」就完成了</li>
+    </ol>
+    <p>綁定後會收到這些通知：</p>
+    <ul class="dots">
+      <li>🥊 <b>新的預約單</b>：卡片上可以直接按「✅ 確認」或「❌ 婉拒」</li>
+      <li>📅 學員在 LINE 上<b>線上預約（已扣堂）</b>或<b>取消</b></li>
+      <li>🙋 學員<b>請假</b></li>
+      <li>📋 每天晚上 8 點：<b>明天的課表</b></li>
+      <li>👋 新客人第一次留資料</li>
+    </ul>
+    <p>不想收了，傳 <kbd>取消通知</kbd> 即可。</p>
+  </section>
+
+  <section class="g" id="s5">
+    <h2><span>5</span>每天的流程</h2>
+    <ol class="steps">
+      <li><b>打開後台「總覽」</b>：看今天幾堂課、有沒有待確認的預約、漏扣提醒</li>
+      <li><b>上完課按「完課扣堂」</b>：在總覽的「今天的課」或「課務扣堂」都可以按</li>
+      <li><b>看「需要處理」</b>：待確認預約、漏扣、快到期、建議續約都會列在這裡，點一下就會跳到對應頁面</li>
+    </ol>
+    <div class="tip"><b>晚上 8 點系統會自動做的事：</b>傳 LINE 提醒明天有課的學員（附「我會準時到／我要請假」按鈕），並把明天的課表傳給教練。</div>
+  </section>
+
+  <section class="g" id="s6">
+    <h2><span>6</span>確認網站預約</h2>
+    <p>新客人從網站或 LINE「首次體驗」送出預約後，狀態是「待確認」。兩種確認方式都可以：</p>
+    <div class="two">
+      <div class="card-g"><h3>方法 A：直接在 LINE 按</h3><p>收到「🥊 新的預約」卡片，按 <kbd>✅ 確認</kbd>。系統會自動建立學員、排進課表、通知客人「預約成功」。</p></div>
+      <div class="card-g"><h3>方法 B：在後台按</h3><p>後台「預約」→「待確認」→ 按 <kbd>確認</kbd>，效果一樣。</p></div>
+    </div>
+    <p>不方便的時段按「婉拒」或「取消」，客人會收到 LINE 通知。</p>
+  </section>
+
+  <section class="g" id="s7">
+    <h2><span>7</span>排課與完課扣堂</h2>
+    <h3>排課</h3>
+    <ol class="steps">
+      <li>後台「課務扣堂」→ <kbd>＋ 排課</kbd></li>
+      <li>選日期、時間、分鐘數</li>
+      <li>固定課：勾每週的星期幾和要排幾週（例如每週一、四，連排 8 週）；只上一次就不要勾</li>
+      <li>點選學員（可多選＝1 對 2、團體課），按 <kbd>建立</kbd></li>
+    </ol>
+    <h3>完課扣堂</h3>
+    <ul class="dots">
+      <li>上完課按 <kbd>完課扣堂</kbd>，每位學員各扣 1 堂，並自動傳 LINE 告訴學員剩幾堂</li>
+      <li><b>按錯了？</b>24 小時內可以按 <kbd>復原扣堂</kbd>，堂數會加回去</li>
+      <li>課表上標「<b>LINE 預約・已扣堂</b>」的課，是學員自己在 LINE 預約時就扣過了，按完課不會再扣</li>
+      <li>上課時間過了還沒扣的課，會出現在最上面黃色的「<b>漏扣提醒</b>」，晚上一次補扣就好</li>
+      <li>學員有按「準時到」或「請假」，課表上會顯示 ✓ 準時到／請假</li>
+    </ul>
+    <h3>取消課程</h3>
+    <p>按 <kbd>取消這堂</kbd>。如果是學員 LINE 預約時已扣堂的課，取消會自動退回 1 堂。</p>
+  </section>
+
+  <section class="g" id="s8">
+    <h2><span>8</span>學員與課程方案</h2>
+    <h3>先設定課程方案（只要做一次）</h3>
+    <p>「學員」頁最下面的「課程方案」：填名稱、堂數、價格、有效天數（例：10 堂私人課・10 堂・8000・90 天），按 <kbd>新增</kbd>。</p>
+    <h3>賣方案／加堂數</h3>
+    <ol class="steps">
+      <li>在學員卡片按 <kbd>賣方案／加堂</kbd></li>
+      <li>輸入方案編號（例如 2），確認後自動加堂數、記收入、算到期日</li>
+      <li>也可以直接輸入堂數（輸入負數＝修正）</li>
+    </ol>
+    <h3>其他功能</h3>
+    <ul class="dots">
+      <li><b>新增學員</b>：<kbd>＋ 新增學員</kbd>，填姓名、電話、目前剩餘堂數</li>
+      <li><b>Excel 匯入舊學員</b>：在 Excel 選「姓名、電話、剩餘堂數」三欄複製，貼到「從 Excel 匯入」</li>
+      <li><b>延期</b>：學員請長假時按 <kbd>延期</kbd>，到期日往後延</li>
+      <li><b>紀錄</b>：看每一筆購買、扣堂、退堂</li>
+      <li><b>編輯</b>：改資料、加標籤（例如 週六班）、設黑名單</li>
+      <li>上方的篩選：建議續約、快到期、已過期、沉睡（60 天沒上課）、黑名單、標籤</li>
+    </ul>
+  </section>
+
+  <section class="g" id="s9">
+    <h2><span>9</span>修改網站內容與照片</h2>
+    <p>後台「網站內容」：改完按最下面的 <kbd>儲存並更新網站</kbd>（照片例外，上傳就生效）。</p>
+    <table class="g-t">
+      <tr><th>聯絡方式</th><td>LINE 官方帳號、IG、電話。留空的不會顯示在網站</td></tr>
+      <tr><th>固定課表</th><td>首頁課表照這裡顯示；這些時段前後也不會開放私人課預約</td></tr>
+      <tr><th>私人課開放時段</th><td>點時間切換開放（紅色）／關閉；可設定開放幾天內、最晚幾小時前預約</td></tr>
+      <tr><th>休假日</th><td>加入的日期整天不開放預約</td></tr>
+      <tr><th>IG 影片</th><td>IG Reels「分享 → 複製連結」貼上，網站會出現「訓練影片」</td></tr>
+      <tr><th>照片</th><td>每個位置都是一本相簿：<kbd>＋ 加照片</kbd> 可一次多張、取相簿名稱；<kbd>管理</kbd> 可寫說明、排順序（第一張是封面）、刪除。網站上點封面可以看整本</td></tr>
+    </table>
+  </section>
+
+  <section class="g" id="s10">
+    <h2><span>10</span>報表</h2>
+    <p>後台「報表」選月份，可以看：當月收入、扣了幾堂、已核銷金額（估算）、目前已收錢還沒上完的堂數、近 6 個月收入長條圖、銷售明細。</p>
+    <div class="tip"><b>收入怎麼算：</b>用「賣方案／加堂」時填的金額計算，所以加堂時記得填收費金額。</div>
+  </section>
+
+  <section class="g" id="s11">
+    <h2><span>11</span>學員怎麼用 LINE 預約</h2>
+    <p>學員加入「突破Boxing」官方帳號後，下方有 6 格選單：</p>
+    <div class="menu6">
+      <div><b>預約私人課</b>選時段預約</div>
+      <div><b>我的堂數</b>剩幾堂、紀錄</div>
+      <div><b>固定課表</b>團課時間地點</div>
+      <div><b>首次體驗</b>新朋友預約</div>
+      <div><b>關於教練</b>網站介紹</div>
+      <div><b>聯絡教練</b>直接傳訊息</div>
+    </div>
+    <ol class="steps">
+      <li><b>第一次打開</b>「預約私人課」：填姓名、手機，系統就記住了（舊學員會用手機自動對到原本的資料）</li>
+      <li><b>有剩餘堂數</b>：選日期時段 → <kbd>線上預約</kbd> → 立即「扣除 1 堂，預約成功」</li>
+      <li><b>沒有堂數／新客人</b>：按 <kbd>申請預約</kbd> → 教練確認後收到 LINE 通知</li>
+      <li><b>取消</b>：「我的課」→ 取消。上課前 12 小時以前可以自己取消並退回堂數，之後要聯絡教練</li>
+      <li>前一晚 8 點會收到提醒，可以按「我會準時到」或「我要請假」</li>
+      <li>學員也可以在聊天室傳 <kbd>查堂數</kbd> 查剩餘堂數</li>
+    </ol>
+  </section>
+
+  <section class="g" id="s12">
+    <h2><span>12</span>常見問題</h2>
+    <h3>登入時出現「已封鎖存取權」或沒反應？</h3>
+    <p>代表是在 LINE／IG 裡面開的。請用 Safari／Chrome 打開，或用主畫面的「教練後台」圖示。</p>
+    <h3>學員說時段都是灰色的？</h3>
+    <p>灰色＝已被約走、固定團課時段、教練休假，或離現在太近（預設 12 小時內不能預約）。可以在「網站內容 → 私人課預約設定」調整。</p>
+    <h3>收不到 LINE 通知？</h3>
+    <p>確認有完成第 4 步「通知綁定」。重新傳一次「通知綁定 密碼」也沒關係。</p>
+    <h3>「聯絡教練」學員傳了訊息但看不到？</h3>
+    <p>到 LINE 官方帳號管理後台（manager.line.biz）→ 設定 → 回應設定，把「聊天」打開，就能在 LINE Official Account App 回覆學員。</p>
+    <h3>同一個學員出現兩筆？</h3>
+    <p>通常是電話號碼不同。到「學員」把多的那筆刪除，必要時用「加堂數」把堂數補到正確那筆。</p>
+  </section>
+
+  <p class="muted" style="text-align:center;font-size:.85rem">突破重圍 BREAK THROUGH・預約系統使用說明</p>
+</div>
+<a class="top-btn" href="#" aria-label="回到最上面">↑</a>
+</body>
+</html>

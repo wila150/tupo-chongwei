@@ -6,8 +6,14 @@
   <meta name="robots" content="noindex">
   <title>教練後台｜突破重圍</title>
   <link rel="icon" href="img/icon-192.png" type="image/png">
+  <link rel="manifest" href="/admin.webmanifest">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="教練後台">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#0e0e0e">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072231">
+  <link rel="stylesheet" href="styles.css?v=202611072238">
   <style>
     body { padding: 0; }
     [hidden] { display: none !important; }
@@ -118,7 +124,10 @@
     .views button.active svg { color: var(--red); }
     .nav-badge { margin-left: auto; background: var(--red); color: #fff; font-family: var(--display); font-size: .8rem; border-radius: 999px; padding: 0 .5rem; min-width: 1.4rem; text-align: center; }
     .nav-badge.warn { background: #f0b429; color: #111; }
-    .side-user { margin-top: auto; display: flex; align-items: center; gap: .6rem; padding: .8rem .5rem 0; border-top: 1px solid #1f1f1f; }
+    .side-help { margin-top: auto; display: flex; align-items: center; gap: .8rem; color: #a9a39a; padding: .7rem .9rem; border-radius: 12px; font-weight: 700; font-size: .95rem; }
+    .side-help:hover { background: #161616; color: var(--paper); }
+    .side-help svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+    .side-user { margin-top: .4rem; display: flex; align-items: center; gap: .6rem; padding: .8rem .5rem 0; border-top: 1px solid #1f1f1f; }
     .side-user img { width: 36px; height: 36px; border-radius: 50%; background: #222; }
     .side-user div { flex: 1; min-width: 0; }
     .side-user b { display: block; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -161,7 +170,7 @@
     @media (max-width: 900px) {
       #appView:not([hidden]) { display: block; }
       .side { position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; z-index: 40; flex-direction: row; padding: .3rem .3rem calc(.3rem + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid #1f1f1f; }
-      .side-brand, .side-user { display: none; }
+      .side-brand, .side-user, .side-help { display: none; }
       .views { grid-template-columns: repeat(6, 1fr); width: 100%; gap: 0; }
       .views button { flex-direction: column; gap: .2rem; padding: .45rem 0; font-size: .68rem; text-align: center; border-radius: 10px; position: relative; }
       .views button.active { box-shadow: none; }
@@ -192,6 +201,9 @@
     .gal-acts button { flex: 1; background: none; border: 0; color: var(--muted); padding: .45rem 0; cursor: pointer; font: inherit; }
     .gal-acts button:hover { color: var(--paper); background: #1a1a1a; }
     .gal-acts button[data-gdel]:hover { color: var(--red); }
+    .inapp { position: fixed; inset: auto 1rem 1rem; z-index: 200; background: #f0b429; color: #111; border-radius: 14px; padding: 1rem 1.1rem; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+    .inapp p { margin: .3rem 0 .7rem; font-size: .9rem; }
+    .inapp .btn { background: #111; border-color: #111; }
     .savebar { position: sticky; bottom: 0; background: rgba(14,14,14,.95); padding: 1rem 0; display: flex; gap: 1rem; align-items: center; border-top: 1px solid #2a2a2a; }
     .savebar .msg { color: var(--muted); }
     @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .cls { grid-template-columns: 1fr 1fr; padding: .8rem; border: 1px solid #2a2a2a; border-radius: 10px; } .cls-head { display: none; } .cls .del { grid-column: 1 / -1; } }
@@ -200,6 +212,22 @@
   </style>
 </head>
 <body>
+  <script>
+  /* LINE／IG／FB 內建瀏覽器不能 Google 登入 → 改用外部瀏覽器 */
+  (function () {
+    var ua = navigator.userAgent, u = new URL(location.href);
+    if (/\bLine\//i.test(ua) && !u.searchParams.has('openExternalBrowser')) { u.searchParams.set('openExternalBrowser', '1'); location.replace(u.href); return; }
+    if (/Instagram|FBAN|FBAV|FB_IAB|MicroMessenger/i.test(ua)) {
+      if (/Android/i.test(ua)) location.href = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;end';
+      document.addEventListener('DOMContentLoaded', function () { document.getElementById('inapp').hidden = false; });
+    }
+  })();
+  </script>
+  <div id="inapp" class="inapp" hidden>
+    <b>請用瀏覽器開啟後台</b>
+    <p>這個 App 的內建瀏覽器不能用 Google 登入。請點右上角「⋯」選「在瀏覽器中開啟」，或複製連結貼到 Safari／Chrome。</p>
+    <button class="btn btn-sm" onclick="navigator.clipboard.writeText('https://tupo-chongwei.web.app/admin').then(function(){this.textContent='已複製 ✓'}.bind(this))">複製後台連結</button>
+  </div>
   <div id="loginView" class="login" hidden>
     <h1>教練後台登入</h1>
     <button type="button" class="google-btn" id="googleLogin"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>用 Google 登入</button>
@@ -211,10 +239,11 @@
     <aside class="side">
       <a href="./" class="side-brand" target="_blank"><img src="img/logo-bear.png" alt=""><div><b>突破<em>重圍</em></b><small>教練後台</small></div></a>
       <nav class="views" id="views"><button data-v="home" class="active"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>總覽</span><b class="nav-badge" data-badge="home" hidden></b></button><button data-v="bookings" class=""><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v5"/><path d="M8 14h3M8 17h6"/></svg><span>預約</span><b class="nav-badge" data-badge="bookings" hidden></b></button><button data-v="lessons" class=""><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/><path d="m9 15 2 2 4-4"/></svg><span>課務扣堂</span><b class="nav-badge" data-badge="lessons" hidden></b></button><button data-v="students" class=""><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 5.8"/></svg><span>學員</span><b class="nav-badge" data-badge="students" hidden></b></button><button data-v="report" class=""><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>報表</span><b class="nav-badge" data-badge="report" hidden></b></button><button data-v="content" class=""><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><span>網站內容</span><b class="nav-badge" data-badge="content" hidden></b></button></nav>
+      <a class="side-help" href="/guide" target="_blank"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.3h.01"/></svg>使用說明</a>
       <div class="side-user"><img id="userPhoto" alt="" referrerpolicy="no-referrer"><div><b id="userName"></b><small id="userEmail"></small></div><button class="icon-btn" id="logout" title="登出"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></button></div>
     </aside>
     <section class="main">
-    <header class="page-head"><div><h1 id="pageTitle">總覽</h1><p id="pageSub"></p></div><button class="icon-btn mobile-logout" id="logout2" title="登出"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></button></header>
+    <header class="page-head"><div><h1 id="pageTitle">總覽</h1><p id="pageSub"></p></div><a class="icon-btn mobile-logout" href="/guide" target="_blank" title="使用說明" style="margin-left:auto;margin-right:.5rem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.3h.01"/></svg></a><button class="icon-btn mobile-logout" id="logout2" title="登出"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></button></header>
 
     <div id="homeView">
       <div class="kpis" id="homeKpis"></div>
@@ -377,7 +406,7 @@
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611072231"></script>
-  <script type="module" src="admin.js?v=202611072231"></script>
+  <script src="data.js?v=202611072238"></script>
+  <script type="module" src="admin.js?v=202611072238"></script>
 </body>
 </html>
