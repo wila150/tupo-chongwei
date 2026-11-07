@@ -148,7 +148,7 @@ details p { color: var(--muted); margin-top: .6rem; }
 .cta .btn { background: #fff; color: var(--red); border-color: #fff; }
 .cta .btn-ghost { background: transparent; color: #fff; }
 .footer { text-align: center; padding: 3rem 4% 6rem; background: var(--paper); color: #333; }
-.footer-logo { width: 110px; margin: 0 auto .4rem; }
+.footer-logo { width: 110px; margin: 0 auto .4rem; filter: invert(1); }
 .footer-brand { font-weight: 900; letter-spacing: .1em; margin-bottom: 1rem; }
 .footer-links { display: flex; justify-content: center; gap: 1.5rem; font-weight: 700; margin-bottom: .5rem; }
 .footer-links a:hover { color: var(--red); }
@@ -195,3 +195,13 @@ details p { color: var(--muted); margin-top: .6rem; }
 .modal-actions .btn { justify-content: center; text-align: center; }
 .quick-line { margin-top: 1.2rem; }
 .quick-line .tiny { display: inline-block; margin-top: .4rem; }
+
+/* LINE / IG 按鈕 */
+.social { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.2rem; }
+.soc { display: inline-flex; align-items: center; gap: .5rem; padding: .55rem 1.1rem .55rem .8rem; border-radius: 999px; color: #fff; font-weight: 700; font-size: .95rem; transition: transform .15s, filter .15s; }
+.soc:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.soc svg { width: 24px; height: 24px; flex: none; }
+.soc-line { background: #06c755; }
+.soc-ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+.soc-mini { display: inline-flex; align-items: center; gap: .35rem; }
+.soc-mini svg { width: 18px; height: 18px; }
