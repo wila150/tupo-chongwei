@@ -8,16 +8,17 @@
   <meta property="og:title" content="突破重圍｜呂淙維 拳擊・綜合體能訓練">
   <meta property="og:description" content="有限的生命力，創造自我的無限。台中拳擊與綜合體能私人教練課，線上預約。">
   <meta property="og:image" content="img/og.jpg">
-  <link rel="icon" href="img/logo-mark.svg" type="image/svg+xml">
+  <link rel="icon" href="img/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611072011">
+  <link rel="stylesheet" href="styles.css?v=202611072017">
 </head>
 <body>
 
 <header class="nav" id="nav">
-  <a href="#top" class="nav-brand"><img src="img/logo-mark.svg" alt="突破重圍 Logo"><span>突破<em>重圍</em></span></a>
+  <a href="#top" class="nav-brand"><img src="img/logo-bear.png" alt="突破重圍 Logo"><span>突破<em>重圍</em></span></a>
   <button class="nav-toggle" aria-label="選單" aria-expanded="false"><span></span><span></span><span></span></button>
   <nav class="nav-links">
     <a href="#about">關於教練</a>
@@ -120,6 +121,7 @@
       <p class="eyebrow center">BOOKING</p>
       <h2 class="center">預約私人課</h2>
       <p class="center muted">選日期和時段送出，教練確認後會用電話或 LINE 聯絡你。灰色是固定團課或已被預約的時段。</p>
+      <p class="center quick-line"><a class="btn btn-line" id="quickLine" target="_blank" rel="noopener">立即預約（LINE）</a><br><span class="tiny muted">不想填表？直接傳 LINE 給教練</span></p>
 
       <form class="booking" id="bookingForm" novalidate>
         <div class="step">
@@ -187,11 +189,20 @@
         <h3>預約已送出！</h3>
         <p id="doneSummary"></p>
         <p class="muted">教練確認後會盡快聯絡你。想更快？直接傳 LINE 跟教練說一聲。</p>
-        <a class="btn" id="doneLine" target="_blank" rel="noopener" hidden>傳 LINE 告訴教練</a>
+        <button class="btn btn-line" type="button" id="doneLine" hidden>傳 LINE 告訴教練</button>
         <button class="btn btn-ghost" type="button" id="bookAgain">再預約一堂</button>
       </div>
     </div>
   </section>
+
+  <div class="modal" id="lineModal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="lineModalTitle">
+      <div class="modal-head"><h3 id="lineModalTitle">等一下會打開 LINE</h3><button type="button" class="modal-x" data-close aria-label="關閉">✕</button></div>
+      <p>會打開「突破Boxing」的聊天室，訊息已經幫你打好，<b>按送出就好</b>，教練就會收到你的預約。</p>
+      <pre class="modal-msg" id="lineMsg"></pre>
+      <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>先不要</button><a class="btn btn-line" id="lineGo" target="_blank" rel="noopener">打開 LINE</a></div>
+    </div>
+  </div>
 
   <!-- FAQ -->
   <section class="section section-dark" id="faq">
@@ -219,7 +230,7 @@
 </main>
 
 <footer class="footer">
-  <img src="img/logo-full.svg" alt="突破重圍" class="footer-logo">
+  <img src="img/logo-bear.png" alt="突破重圍" class="footer-logo"><p class="footer-brand">突破<em>重圍</em> BREAK THROUGH</p>
   <div class="footer-links">
     <a href="#" data-contact="line" target="_blank" rel="noopener">LINE</a>
     <a href="#" data-contact="instagram" target="_blank" rel="noopener">Instagram</a>
@@ -230,7 +241,7 @@
 
 <a href="#booking" class="float-cta">預約</a>
 
-<script src="data.js?v=202611072011"></script>
-<script type="module" src="app.js?v=202611072011"></script>
+<script src="data.js?v=202611072017"></script>
+<script type="module" src="app.js?v=202611072017"></script>
 </body>
 </html>

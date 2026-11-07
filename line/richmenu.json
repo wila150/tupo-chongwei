@@ -1,0 +1,8 @@
+{"size":{"width":2500,"height":1686},"selected":true,"name":"突破重圍 主選單 v1","chatBarText":"選單",
+ "areas":[
+  {"bounds":{"x":0,"y":0,"width":1000,"height":1686},"action":{"type":"uri","label":"預約私人課","uri":"https://tupo-chongwei.web.app/#booking"}},
+  {"bounds":{"x":1000,"y":0,"width":750,"height":843},"action":{"type":"uri","label":"固定課表","uri":"https://tupo-chongwei.web.app/#schedule"}},
+  {"bounds":{"x":1750,"y":0,"width":750,"height":843},"action":{"type":"uri","label":"訓練項目","uri":"https://tupo-chongwei.web.app/#training"}},
+  {"bounds":{"x":1000,"y":843,"width":750,"height":843},"action":{"type":"uri","label":"關於教練","uri":"https://tupo-chongwei.web.app/#about"}},
+  {"bounds":{"x":1750,"y":843,"width":750,"height":843},"action":{"type":"uri","label":"常見問題","uri":"https://tupo-chongwei.web.app/#faq"}}
+ ]}

@@ -1,0 +1,28 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&family=Oswald:wght@700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;box-sizing:border-box}
+body{width:2500px;height:1686px;background:#0e0e0e;font-family:'Noto Sans TC',sans-serif;color:#f4f1ea}
+.g{display:grid;grid-template-columns:1000px 1fr 1fr;grid-template-rows:repeat(2,1fr);width:100%;height:100%;gap:10px;background:#2a2a2a}
+.t{background:#161616;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;position:relative;overflow:hidden}
+.t.red{background:linear-gradient(135deg,#d7262e,#a8161d)}
+.ic{width:230px;height:230px;color:#f4f1ea}.t:not(.red) .ic{color:#d7262e}
+.t img{width:260px;height:260px}
+.zh{font-size:120px;font-weight:900;letter-spacing:6px}
+.en{font-family:Oswald;font-size:56px;letter-spacing:10px;color:#d7262e}
+.red .en{color:#fff;opacity:.85}
+.t:after{content:'';position:absolute;left:0;bottom:0;width:100%;height:12px;background:#d7262e}
+.red:after{background:#fff}
+.big{grid-row:1/3;justify-content:flex-end;padding:0;gap:0}
+.art{position:absolute;inset:0;background:url(bear-art.png) center 20%/cover}
+.big .band{position:relative;width:100%;background:linear-gradient(135deg,#d7262e,#a8161d);padding:50px 0 60px;text-align:center}
+.big .zh{font-size:140px}.big .en{color:#fff;font-size:64px;opacity:.9}
+.big:after{display:none}
+.mk{width:330px;height:330px;object-fit:contain;margin-bottom:10px}
+</style></head><body><div class="g">
+<div class="t big"><div class="art"></div><div class="band"><div class="zh">預約私人課</div><div class="en">BOOK NOW</div></div></div>
+<div class="t"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div class="zh">固定課表</div><div class="en">SCHEDULE</div></div>
+<div class="t"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12"/></svg><div class="zh">訓練項目</div><div class="en">TRAINING</div></div>
+<div class="t"><img src="logo-bear.png" class="mk"><div class="zh">關於教練</div><div class="en">COACH</div></div>
+<div class="t"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17.3" r=".6" fill="currentColor"/></svg><div class="zh">常見問題</div><div class="en">FAQ</div></div>
+</div></body></html>

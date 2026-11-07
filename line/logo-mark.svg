@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <g id="glove">
+      <rect x="-30" y="22" width="60" height="34" rx="6" fill="#f2efe9" stroke="#111" stroke-width="5"/>
+      <line x1="-30" y1="36" x2="30" y2="36" stroke="#111" stroke-width="4"/>
+      <rect x="-40" y="-56" width="80" height="86" rx="38" fill="#d7262e" stroke="#111" stroke-width="5"/>
+      <ellipse cx="-38" cy="2" rx="15" ry="24" fill="#d7262e" stroke="#111" stroke-width="5"/>
+      <path d="M-14 -38 Q4 -46 20 -34" stroke="#ff8a8f" stroke-width="6" fill="none" stroke-linecap="round"/>
+    </g>
+  </defs>
+
+  <!-- badge -->
+  <circle cx="256" cy="256" r="244" fill="#111"/>
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#d7262e" stroke-width="10"/>
+
+  <!-- ears -->
+  <circle cx="160" cy="140" r="52" fill="#3a2a22" stroke="#f2efe9" stroke-width="8"/>
+  <circle cx="352" cy="140" r="52" fill="#3a2a22" stroke="#f2efe9" stroke-width="8"/>
+  <circle cx="160" cy="140" r="26" fill="#1c1410"/>
+  <circle cx="352" cy="140" r="26" fill="#1c1410"/>
+
+  <!-- head -->
+  <ellipse cx="256" cy="235" rx="132" ry="120" fill="#3a2a22" stroke="#f2efe9" stroke-width="8"/>
+
+  <!-- muzzle -->
+  <ellipse cx="256" cy="290" rx="64" ry="48" fill="#c9a27e"/>
+  <path d="M230 262 Q256 250 282 262 Q272 286 256 290 Q240 286 230 262Z" fill="#111"/>
+  <path d="M256 290 V304 M256 304 Q240 320 226 306 M256 304 Q272 320 286 306" stroke="#111" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+  <!-- right eye (normal, fierce) -->
+  <path d="M282 196 L332 184" stroke="#f2efe9" stroke-width="9" stroke-linecap="round"/>
+  <ellipse cx="308" cy="218" rx="14" ry="11" fill="#f2efe9"/>
+  <circle cx="306" cy="219" r="6" fill="#111"/>
+
+  <!-- left eye (scarred, closed) -->
+  <path d="M180 184 L230 196" stroke="#f2efe9" stroke-width="9" stroke-linecap="round"/>
+  <path d="M188 220 Q206 230 224 220" stroke="#f2efe9" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <!-- scar with stitches -->
+  <path d="M184 166 L236 266" stroke="#d7262e" stroke-width="9" stroke-linecap="round"/>
+  <g stroke="#f2efe9" stroke-width="4" stroke-linecap="round">
+    <line x1="186" y1="198" x2="208" y2="187"/>
+    <line x1="199" y1="222" x2="221" y2="211"/>
+    <line x1="212" y1="246" x2="234" y2="235"/>
+  </g>
+
+  <!-- gloves -->
+  <use href="#glove" transform="translate(150 372) rotate(-22)"/>
+  <use href="#glove" transform="translate(362 372) rotate(22) scale(-1 1)"/>
+
+  <!-- infinity mark breaking the ring -->
+  <rect x="200" y="446" width="112" height="44" fill="#111"/>
+  <path d="M256 468 C240 446 210 446 210 468 C210 490 240 490 256 468 C272 446 302 446 302 468 C302 490 272 490 256 468Z" fill="none" stroke="#d7262e" stroke-width="9" stroke-linejoin="round"/>
+</svg>

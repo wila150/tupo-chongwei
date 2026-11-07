@@ -1,7 +1,8 @@
 // 網站可改的資料集中在這裡：課表、聯絡方式、私人課可預約時間
 window.SITE = {
   contact: {
-    line: '',        // 例：https://lin.ee/xxxx （待補）
+    line: 'https://line.me/R/ti/p/@043ixcyx', // LINE 官方帳號「突破Boxing」
+    lineOA: '@043ixcyx',  // 官方帳號 ID：預約完成用 oaMessage 預填訊息
     instagram: '',   // 例：https://instagram.com/xxxx （待補）
     phone: ''        // 例：0912345678 （待補）
   },

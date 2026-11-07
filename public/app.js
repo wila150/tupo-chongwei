@@ -64,6 +64,9 @@ const io = new IntersectionObserver(es => es.forEach(e => {
 $$('.reveal').forEach(el => io.observe(el));
 
 /* ---------- booking ---------- */
+const quick = $('#quickLine');
+if (S.contact.lineOA) quick.href = `https://line.me/R/oaMessage/${S.contact.lineOA}/?${encodeURIComponent('教練你好，我想預約私人課 🥊\n想上課的時間：\n想練的項目：')}`;
+else quick.closest('p').remove();
 const B = S.booking;
 const form = $('#bookingForm');
 const busy = new Set(); // "YYYY-MM-DD HH:MM" taken by confirmed bookings
@@ -153,11 +156,11 @@ form.addEventListener('submit', async e => {
     const d = new Date(`${data.date}T00:00:00`);
     $('#doneSummary').textContent = `${data.name}，你預約了 ${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time} 的私人課。`;
     const msg = `教練你好，我在網站預約了私人課：\n${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time}\n${data.name} ${data.phone}`;
-    const line = $('#doneLine');
-    if (S.contact.line) {
-      line.hidden = false; line.href = S.contact.line;
-      line.onclick = () => { navigator.clipboard?.writeText(msg).catch(() => {}); };
-      line.textContent = '傳 LINE 告訴教練（自動複製預約內容）';
+    const oa = S.contact.lineOA;
+    $('#doneLine').hidden = !oa;
+    if (oa) {
+      $('#lineMsg').textContent = msg;
+      $('#lineGo').href = `https://line.me/R/oaMessage/${oa}/?${encodeURIComponent(msg)}`;
     }
     form.hidden = true; $('#bookingDone').hidden = false;
     $('#booking').scrollIntoView({ behavior: 'smooth' });
@@ -168,6 +171,12 @@ form.addEventListener('submit', async e => {
     btn.disabled = false; btn.textContent = '送出預約';
   }
 });
+
+const modal = $('#lineModal');
+$('#doneLine').addEventListener('click', () => { modal.hidden = false; });
+modal.addEventListener('click', e => { if (e.target === modal || e.target.closest('[data-close]')) modal.hidden = true; });
+$('#lineGo').addEventListener('click', () => { modal.hidden = true; });
+addEventListener('keydown', e => { if (e.key === 'Escape') modal.hidden = true; });
 
 $('#bookAgain').addEventListener('click', () => {
   form.reset(); form.hidden = false; $('#bookingDone').hidden = true;
