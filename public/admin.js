@@ -13,9 +13,11 @@ const V = '10.12.2';
 const { initializeApp } = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`);
 const A = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`);
 const F = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`);
+const ST = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-storage.js`);
 const app = initializeApp(firebaseConfig);
 const auth = A.getAuth(app);
 const db = F.getFirestore(app);
+const storage = ST.getStorage(app);
 
 let all = [], filter = 'pending', unsub = null;
 
@@ -226,7 +228,7 @@ $('#saveContent').addEventListener('click', async () => {
   } finally { btn.disabled = false; }
 });
 
-/* ---------- 照片：瀏覽器端壓縮後存 Firestore photos/{slot}（免 Storage／付費方案） ---------- */
+/* ---------- 照片：瀏覽器端縮圖成 webp → Firebase Storage photos/{slot}.webp，網址寫進 site/config.photos ---------- */
 const SLOTS = [
   { id: 'coach', name: '教練照片', where: '「關於教練」', max: 1400 },
   { id: 'g1', name: '訓練照片 1', where: '私人課相簿（大張）', max: 1600 },
@@ -244,12 +246,9 @@ async function loadPhotos() {
       <div class="ph-actions"><label class="btn btn-sm">上傳<input type="file" accept="image/*" hidden></label>
       <button type="button" class="btn btn-ghost btn-sm" data-rm hidden>移除</button></div>
       <small class="ph-msg"></small></div></div>`).join('');
-  await Promise.all(SLOTS.map(async s => {
-    const card = $(`.ph[data-slot="${s.id}"]`);
-    let url = '';
-    try { const snap = await F.getDoc(F.doc(db, 'photos', s.id)); url = snap.exists() ? snap.data().data : ''; } catch {}
-    showPhoto(card, url);
-  }));
+  let urls = {};
+  try { const snap = await F.getDoc(F.doc(db, 'site', 'config')); urls = (snap.exists() && snap.data().photos) || {}; } catch {}
+  SLOTS.forEach(s => showPhoto($(`.ph[data-slot="${s.id}"]`), urls[s.id] || ''));
 }
 
 function showPhoto(card, url) {
@@ -265,11 +264,7 @@ async function compress(file, max) {
   const c = document.createElement('canvas');
   c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
   c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-  for (let q = 0.82; q >= 0.4; q -= 0.08) {
-    const url = c.toDataURL('image/webp', q);
-    if (url.length < 900000) return url;
-  }
-  throw new Error('照片太大，請換一張');
+  return new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error('照片轉檔失敗')), 'image/webp', 0.85));
 }
 
 $('#photoGrid').addEventListener('change', async e => {
@@ -277,12 +272,15 @@ $('#photoGrid').addEventListener('change', async e => {
   const card = e.target.closest('.ph'), slot = SLOTS.find(s => s.id === card.dataset.slot), msg = card.querySelector('.ph-msg');
   msg.textContent = '壓縮上傳中…';
   try {
-    const url = await compress(file, slot.max);
-    await F.setDoc(F.doc(db, 'photos', slot.id), { data: url, updatedAt: F.serverTimestamp() });
-    await F.setDoc(F.doc(db, 'site', 'config'), { photoVer: { [slot.id]: Date.now() } }, { merge: true });
-    showPhoto(card, url); msg.textContent = `已更新 ✓（${Math.round(url.length * 0.75 / 1024)} KB）`;
+    const blob = await compress(file, slot.max);
+    const r = ST.ref(storage, `photos/${slot.id}.webp`);
+    await ST.uploadBytes(r, blob, { contentType: 'image/webp', cacheControl: 'public, max-age=31536000' });
+    const url = `${await ST.getDownloadURL(r)}&v=${Date.now()}`;
+    await F.setDoc(F.doc(db, 'site', 'config'), { photos: { [slot.id]: url } }, { merge: true });
+    showPhoto(card, url); msg.textContent = `已更新 ✓（${Math.round(blob.size / 1024)} KB）`;
   } catch (err) {
-    msg.textContent = err.code === 'permission-denied' ? '失敗：這個帳號還沒有管理員權限' : '失敗：' + err.message;
+    msg.textContent = ['permission-denied', 'storage/unauthorized'].includes(err.code) ? '失敗：這個帳號還沒有管理員權限'
+      : err.code?.startsWith('storage/') ? '失敗：照片空間還沒開通（Firebase Storage）' : '失敗：' + err.message;
   } finally { e.target.value = ''; }
 });
 
@@ -291,8 +289,8 @@ $('#photoGrid').addEventListener('click', async e => {
   const card = e.target.closest('.ph'), msg = card.querySelector('.ph-msg');
   if (!confirm('移除這張照片？')) return;
   try {
-    await F.deleteDoc(F.doc(db, 'photos', card.dataset.slot));
-    await F.setDoc(F.doc(db, 'site', 'config'), { photoVer: { [card.dataset.slot]: F.deleteField() } }, { merge: true });
+    await ST.deleteObject(ST.ref(storage, `photos/${card.dataset.slot}.webp`)).catch(() => {});
+    await F.setDoc(F.doc(db, 'site', 'config'), { photos: { [card.dataset.slot]: F.deleteField() } }, { merge: true });
     showPhoto(card, ''); msg.textContent = '已移除';
   }
   catch (err) { msg.textContent = '失敗：' + err.message; }
