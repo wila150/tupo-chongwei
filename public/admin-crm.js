@@ -15,6 +15,32 @@ const endMs = l => new Date(`${l.date}T${l.time}:00`).getTime() + (l.minutes || 
 export function initCrm({ F, db, esc, $ }) {
   let students = [], lessons = [];
   const byId = id => students.find(s => s.id === id);
+  const todayStr = () => ymd(new Date());
+  const addDays = (str, n) => { const d = new Date(`${str}T00:00:00`); d.setDate(d.getDate() + n); return ymd(d); };
+  const daysLeft = s => s.expiresAt ? Math.round((new Date(`${s.expiresAt}T00:00:00`) - new Date(`${todayStr()}T00:00:00`)) / 864e5) : null;
+  const lastLesson = sid => lessons.filter(l => l.status === 'done' && l.studentIds.includes(sid)).map(l => l.date).sort().at(-1) || null;
+  const isSleeping = s => !s.blocked && !lastLesson(s.id) && (!s.createdAt?.toDate || Date.now() - s.createdAt.toDate() > 14 * 864e5);
+  const statusTags = s => {
+    const t = [], dl = daysLeft(s);
+    if (s.blocked) t.push('<span class="tag bad">黑名單</span>');
+    if (s.credits <= RENEW_AT) t.push('<span class="tag warn">建議續約</span>');
+    if (dl !== null && dl < 0) t.push('<span class="tag bad">已過期</span>');
+    else if (dl !== null && dl <= 14) t.push(`<span class="tag warn">${dl} 天後到期</span>`);
+    if (isSleeping(s)) t.push('<span class="tag">60 天沒上課</span>');
+    (s.tags || []).forEach(x => t.push(`<span class="tag tag-u">#${esc(x)}</span>`));
+    if (s.lineUserId) t.push('<span class="tag line">LINE 已綁定</span>');
+    return t.join(' ');
+  };
+  let stFilter = 'all';
+  const FILTERS = [
+    ['all', '全部', () => true],
+    ['renew', '建議續約', s => s.credits <= RENEW_AT && !s.blocked],
+    ['expiring', '快到期', s => { const d = daysLeft(s); return d !== null && d >= 0 && d <= 14; }],
+    ['expired', '已過期', s => { const d = daysLeft(s); return d !== null && d < 0; }],
+    ['sleep', '沉睡', s => isSleeping(s)],
+    ['blocked', '黑名單', s => s.blocked]
+  ];
+
   const normPhone = p => String(p || '').replace(/[^0-9]/g, '');
 
   /* ---------- live data ---------- */
@@ -22,6 +48,11 @@ export function initCrm({ F, db, esc, $ }) {
     students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderStudents(); renderLessons(); renderPicker();
   }, err => console.warn('students', err));
+  let packages = [];
+  F.onSnapshot(F.query(F.collection(db, 'packages'), F.orderBy('credits')), snap => {
+    packages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderPackages();
+  }, err => console.warn('packages', err));
   const since = new Date(); since.setDate(since.getDate() - 60);
   F.onSnapshot(F.query(F.collection(db, 'lessons'), F.where('date', '>=', ymd(since))), snap => {
     lessons = snap.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -82,6 +113,8 @@ export function initCrm({ F, db, esc, $ }) {
   async function deduct(l) {
     if (!l.studentIds.length) return alert('這堂課沒有學員，請先刪掉重排');
     const zero = l.studentIds.map(byId).filter(s => s && s.credits <= 0);
+    const exp = l.studentIds.map(byId).filter(s => s && daysLeft(s) !== null && daysLeft(s) < 0);
+    if (exp.length && !confirm(`${exp.map(s => `${s.name}（${s.expiresAt} 到期）`).join('、')} 方案已過期，仍要扣嗎？`)) return;
     if (zero.length && !confirm(`${zero.map(s => s.name).join('、')} 已經沒有剩餘堂數，仍要扣嗎？（會變成負數）`)) return;
     const b = F.writeBatch(db);
     b.update(F.doc(db, 'lessons', l.id), { status: 'done', doneAtMs: Date.now() });
@@ -157,33 +190,61 @@ export function initCrm({ F, db, esc, $ }) {
   /* ================= 學員 ================= */
   function renderStudents() {
     const q = ($('#stSearch').value || '').trim();
-    const list = students.filter(s => !q || s.name.includes(q) || normPhone(s.phone).includes(q));
+    const tags = [...new Set(students.flatMap(s => s.tags || []))].sort();
+    const fl = [...FILTERS, ...tags.map(t => [`#${t}`, `#${t}`, s => (s.tags || []).includes(t)])];
+    $('#stFilters').innerHTML = fl.map(([k, label, fn]) => { const n = students.filter(fn).length; return (k === 'all' || n) ? `<button type="button" data-f="${esc(k)}" class="${stFilter === k ? 'active' : ''}">${esc(label)}<b>${n}</b></button>` : ''; }).join('');
+    const fn = (fl.find(x => x[0] === stFilter) || FILTERS[0])[2];
+    const list = students.filter(s => fn(s) && (!q || s.name.includes(q) || normPhone(s.phone).includes(q) || (s.tags || []).some(t => t.includes(q))));
     const renew = students.filter(s => s.credits <= RENEW_AT).length;
-    $('#stSummary').textContent = `共 ${students.length} 位學員${renew ? `・${renew} 位建議續約` : ''}`;
-    $('#stList').innerHTML = list.map(s => `<div class="st">
-      <div class="st-main"><b>${esc(s.name)}</b> ${s.credits <= RENEW_AT ? '<span class="tag warn">建議續約</span>' : ''}
-        <div class="bk-meta">${esc(s.phone || '')}${s.lineId ? `・LINE ${esc(s.lineId)}` : ''}${s.note ? `・${esc(s.note)}` : ''}</div></div>
+    $('#stSummary').textContent = `共 ${students.length} 位學員${renew ? `・${renew} 位建議續約` : ''}・顯示 ${list.length} 位`;
+    $('#stList').innerHTML = list.map(s => `<div class="st ${s.blocked ? 'blocked' : ''}">
+      <div class="st-main"><b>${esc(s.name)}</b> ${statusTags(s)}
+        <div class="bk-meta">${esc(s.phone || '')}${s.lineId ? `・LINE ${esc(s.lineId)}` : ''}${s.expiresAt ? `・到期 ${s.expiresAt}` : ''}${lastLesson(s.id) ? `・上次上課 ${lastLesson(s.id).slice(5)}` : ''}${s.note ? `・${esc(s.note)}` : ''}</div></div>
       <div class="st-credits ${s.credits <= RENEW_AT ? 'low' : ''}"><b>${s.credits}</b><small>剩餘堂數</small></div>
       <div class="st-acts">
-        <button class="btn btn-sm" data-buy="${s.id}">加堂數</button>
+        <button class="btn btn-sm" data-buy="${s.id}">賣方案／加堂</button>
+        <button class="btn btn-ghost btn-sm" data-extend="${s.id}">延期</button>
         <button class="btn btn-ghost btn-sm" data-log="${s.id}">紀錄</button>
         <button class="btn btn-ghost btn-sm" data-edit="${s.id}">編輯</button>
       </div>
       <div class="st-log" id="log-${s.id}" hidden></div>
-    </div>`).join('') || '<p class="empty">還沒有學員</p>';
+    </div>`).join('') || '<p class="empty">沒有符合的學員</p>';
   }
+  $('#stFilters').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; stFilter = b.dataset.f; renderStudents(); });
   $('#stSearch').addEventListener('input', renderStudents);
 
   $('#stList').addEventListener('click', async e => {
     const t = e.target.dataset;
     if (t.buy) {
-      const s = byId(t.buy);
-      const n = parseInt(prompt(`${s.name} 加幾堂？（輸入負數可以修正）`, '10'), 10); if (!n) return;
-      const amount = n > 0 ? Number(prompt('收費金額（元，可留空）', '') || 0) : 0;
-      const b = F.writeBatch(db);
-      b.update(F.doc(db, 'students', s.id), { credits: F.increment(n) });
-      b.set(F.doc(F.collection(db, 'students', s.id, 'ledger')), { type: n > 0 ? 'buy' : 'adjust', delta: n, amount, note: n > 0 ? `購買 ${n} 堂` : `修正 ${n} 堂`, at: F.serverTimestamp() });
-      await b.commit().catch(err => alert('失敗：' + err.message));
+      const st = byId(t.buy);
+      const act = packages.filter(p => p.active !== false);
+      const menu = act.map((p, i) => `${i + 1}. ${p.name}（${p.credits} 堂 $${p.price}${p.days ? `・${p.days} 天` : ''}）`).join('\n');
+      const pick = prompt(`${st.name}：選方案輸入編號，或直接輸入要加幾堂（負數＝修正）\n${menu || '（還沒有方案，可到下方「課程方案」新增）'}`, act.length ? '1' : '10');
+      if (pick === null || pick.trim() === '') return;
+      let n, amount = 0, days = 0, label;
+      const pi = /^#?\d+$/.test(pick.trim()) && act.length && Number(pick) >= 1 && Number(pick) <= act.length && !pick.trim().startsWith('-') ? act[Number(pick) - 1] : null;
+      if (pi && confirm(`賣「${pi.name}」給 ${st.name}：+${pi.credits} 堂、收 $${pi.price}${pi.days ? `、有效 ${pi.days} 天` : ''}？\n（按取消＝把 ${pick} 當成堂數）`)) {
+        n = pi.credits; amount = pi.price; days = pi.days || 0; label = pi.name;
+      } else {
+        n = parseInt(pick, 10); if (!n) return;
+        if (n > 0) { amount = Number(prompt('收費金額（元，可留空）', '') || 0); days = Number(prompt('有效天數（留空＝不改到期日）', '') || 0); }
+        label = n > 0 ? `購買 ${n} 堂` : `修正 ${n} 堂`;
+      }
+      const upd = { credits: F.increment(n) };
+      if (days > 0) { const base = st.expiresAt && st.expiresAt > todayStr() ? st.expiresAt : todayStr(); upd.expiresAt = addDays(base, days); }
+      const bt = F.writeBatch(db);
+      bt.update(F.doc(db, 'students', st.id), upd);
+      bt.set(F.doc(F.collection(db, 'students', st.id, 'ledger')), { type: n > 0 ? 'buy' : 'adjust', delta: n, amount, note: label + (upd.expiresAt ? `（到期 ${upd.expiresAt}）` : ''), at: F.serverTimestamp() });
+      if (amount > 0) bt.set(F.doc(F.collection(db, 'sales')), { studentId: st.id, name: st.name, label, credits: n, amount, month: todayStr().slice(0, 7), date: todayStr(), at: F.serverTimestamp() });
+      await bt.commit().catch(err => alert('失敗：' + err.message));
+    } else if (t.extend) {
+      const st = byId(t.extend);
+      if (!st.expiresAt) return alert(`${st.name} 沒有設定到期日（賣有天數的方案，或在「編輯」設定）`);
+      const d = parseInt(prompt(`${st.name} 目前 ${st.expiresAt} 到期。請假要延後幾天？`, '7'), 10); if (!d) return;
+      const exp = addDays(st.expiresAt, d), bt = F.writeBatch(db);
+      bt.update(F.doc(db, 'students', st.id), { expiresAt: exp });
+      bt.set(F.doc(F.collection(db, 'students', st.id, 'ledger')), { type: 'extend', delta: 0, note: `請假延期 ${d} 天（到期 ${exp}）`, at: F.serverTimestamp() });
+      await bt.commit().catch(err => alert('失敗：' + err.message));
     } else if (t.log) {
       const box = $(`#log-${t.log}`);
       if (!box.hidden) { box.hidden = true; return; }
@@ -200,6 +261,7 @@ export function initCrm({ F, db, esc, $ }) {
     const f = $('#stForm'); f.hidden = false; f.dataset.id = s?.id || '';
     f.name.value = s?.name || ''; f.phone.value = s?.phone || ''; f.lineId.value = s?.lineId || ''; f.note.value = s?.note || '';
     f.credits.value = s ? s.credits : 0; f.credits.disabled = !!s;
+    f.tags.value = (s?.tags || []).join('、'); f.expiresAt.value = s?.expiresAt || ''; f.blocked.checked = !!s?.blocked;
     $('#stFormTitle').textContent = s ? `編輯 ${s.name}` : '新增學員';
     $('#stDelete').hidden = !s;
     f.scrollIntoView({ behavior: 'smooth', block: 'center' }); f.name.focus();
@@ -210,7 +272,8 @@ export function initCrm({ F, db, esc, $ }) {
   $('#stForm').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, id = f.dataset.id;
-    const data = { name: f.name.value.trim(), phone: f.phone.value.trim(), lineId: f.lineId.value.trim(), note: f.note.value.trim() };
+    const data = { name: f.name.value.trim(), phone: f.phone.value.trim(), lineId: f.lineId.value.trim(), note: f.note.value.trim(),
+      tags: [...new Set(f.tags.value.split(/[、,，\s#]+/).map(x => x.trim()).filter(Boolean))].slice(0, 10), expiresAt: f.expiresAt.value || null, blocked: f.blocked.checked };
     if (!data.name) return alert('請填姓名');
     try {
       if (id) await F.updateDoc(F.doc(db, 'students', id), data);
@@ -260,8 +323,74 @@ export function initCrm({ F, db, esc, $ }) {
     } catch (err) { alert('匯入失敗：' + err.message); }
   });
 
+
+  /* ---------- 課程方案 ---------- */
+  function renderPackages() {
+    const box = $('#pkList'); if (!box) return;
+    box.innerHTML = packages.map(p => `<div class="reel-row pk-row ${p.active === false ? 'off' : ''}">
+      <a>${esc(p.name)}・${p.credits} 堂・$${p.price}${p.days ? `・${p.days} 天` : '・不限期'}${p.credits ? `・每堂 $${Math.round(p.price / p.credits)}` : ''}</a>
+      <button type="button" data-pkoff="${p.id}" class="txt">${p.active === false ? '上架' : '停售'}</button>
+      <button type="button" data-pkdel="${p.id}" title="刪除">✕</button></div>`).join('') || '<p class="hint">還沒有方案</p>';
+  }
+  $('#pkForm').addEventListener('submit', async e => {
+    e.preventDefault(); const f = e.target;
+    const d = { name: f.pkName.value.trim(), credits: parseInt(f.pkCredits.value, 10) || 0, price: parseInt(f.pkPrice.value, 10) || 0, days: parseInt(f.pkDays.value, 10) || 0, active: true };
+    if (!d.name || d.credits <= 0) return alert('請填方案名稱和堂數');
+    await F.setDoc(F.doc(F.collection(db, 'packages')), d).catch(err => alert('失敗：' + err.message));
+    f.reset();
+  });
+  $('#pkList').addEventListener('click', async e => {
+    const t = e.target.dataset;
+    if (t.pkoff) { const p = packages.find(x => x.id === t.pkoff); await F.updateDoc(F.doc(db, 'packages', p.id), { active: p.active === false }); }
+    if (t.pkdel && confirm('刪除這個方案？（已賣出的不受影響）')) await F.deleteDoc(F.doc(db, 'packages', t.pkdel));
+  });
+
+  /* ================= 報表 ================= */
+  $('#rpMonth').value = todayStr().slice(0, 7);
+  $('#rpMonth').addEventListener('change', renderReport);
+  async function renderReport() {
+    const m = $('#rpMonth').value; if (!m) return;
+    const [y, mo] = m.split('-').map(Number);
+    const next = `${mo === 12 ? y + 1 : y}-${pad(mo === 12 ? 1 : mo + 1)}`;
+    const start6 = new Date(y, mo - 6, 1), m6 = `${start6.getFullYear()}-${pad(start6.getMonth() + 1)}`;
+    $('#rpBody').innerHTML = '<p class="hint">計算中…</p>';
+    try {
+      const [salesSnap, lesSnap] = await Promise.all([
+        F.getDocs(F.query(F.collection(db, 'sales'), F.where('month', '>=', m6))),
+        F.getDocs(F.query(F.collection(db, 'lessons'), F.where('date', '>=', `${m}-01`)))
+      ]);
+      const sales = salesSnap.docs.map(d => d.data());
+      const monthSales = sales.filter(x => x.month === m);
+      const revenue = monthSales.reduce((a, x) => a + (x.amount || 0), 0);
+      const done = lesSnap.docs.map(d => d.data()).filter(l => l.date < `${next}-01` && l.status === 'done');
+      const doneSeats = done.reduce((a, l) => a + l.studentIds.length, 0);
+      const allSalesCredits = sales.reduce((a, x) => a + (x.credits || 0), 0), allSalesAmt = sales.reduce((a, x) => a + (x.amount || 0), 0);
+      const avg = allSalesCredits ? allSalesAmt / allSalesCredits : 0;
+      const unused = students.reduce((a, s) => a + Math.max(0, s.credits || 0), 0);
+      const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(y, mo - 6 + i, 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; });
+      const perMonth = months.map(k => sales.filter(x => x.month === k).reduce((a, x) => a + (x.amount || 0), 0));
+      const max = Math.max(1, ...perMonth);
+      const money = n => '$' + Math.round(n).toLocaleString();
+      $('#rpBody').innerHTML = `
+        <div class="kpis">
+          <div class="kpi"><small>${mo} 月收入</small><b>${money(revenue)}</b><small>${monthSales.length} 筆</small></div>
+          <div class="kpi"><small>${mo} 月已上課（扣堂）</small><b>${doneSeats} 堂</b><small>${done.length} 個時段</small></div>
+          <div class="kpi"><small>${mo} 月已核銷金額（估）</small><b>${avg ? money(doneSeats * avg) : '—'}</b><small>${avg ? `以平均每堂 ${money(avg)} 估算` : '還沒有銷售紀錄'}</small></div>
+          <div class="kpi"><small>目前未上完（預收）</small><b>${unused} 堂</b><small>${avg ? `約 ${money(unused * avg)}` : ''}</small></div>
+        </div>
+        <div class="panel"><h2>近 6 個月收入</h2><div class="bars">${months.map((k, i) => `<div class="bar-col"><span class="bar-val">${perMonth[i] ? money(perMonth[i]) : ''}</span><div class="bar-fill" style="height:${Math.round(perMonth[i] / max * 100)}%"></div><small>${Number(k.slice(5))}月</small></div>`).join('')}</div></div>
+        <div class="panel"><h2>${mo} 月銷售明細</h2>${monthSales.sort((a, b) => a.date.localeCompare(b.date)).map(x => `<div class="log"><span>${x.date.slice(5)}</span><span>${esc(x.name)}・${esc(x.label)}</span><b class="pos">+${x.credits}</b><small>${money(x.amount)}</small></div>`).join('') || '<p class="hint">這個月還沒有銷售</p>'}</div>`;
+    } catch (err) { $('#rpBody').innerHTML = `<p class="hint">讀取失敗：${esc(err.message)}</p>`; }
+  }
+
   /* ---------- 網站預約確認 → 自動建學員＋排課 ---------- */
   return {
+    renderReport,
+    flag(phone) {
+      const p = normPhone(phone); const st = p && students.find(x => normPhone(x.phone) === p);
+      if (!st) return '';
+      return st.blocked ? `<span class="tag bad">⚠️ 黑名單學員</span>` : `<span class="tag">舊學員・剩 ${st.credits} 堂</span>`;
+    },
     async bookingConfirmed(bk, batch) {
       const p = normPhone(bk.phone);
       let s = students.find(x => p && normPhone(x.phone) === p);
@@ -269,7 +398,9 @@ export function initCrm({ F, db, esc, $ }) {
       if (!sid) {
         const ref = F.doc(F.collection(db, 'students'));
         sid = ref.id;
-        batch.set(ref, { name: bk.name, phone: bk.phone, lineId: bk.lineId || '', note: '網站預約', credits: 0, createdAt: F.serverTimestamp() });
+        batch.set(ref, { name: bk.name, phone: bk.phone, lineId: bk.lineId || '', note: '網站預約', credits: 0, createdAt: F.serverTimestamp(), ...(bk.lineUserId ? { lineUserId: bk.lineUserId, lineName: bk.lineName || '' } : {}) });
+      } else if (bk.lineUserId && !s.lineUserId) {
+        batch.update(F.doc(db, 'students', sid), { lineUserId: bk.lineUserId, lineName: bk.lineName || '' });
       }
       batch.set(F.doc(db, 'lessons', `bk_${bk.id}`), {
         date: bk.date, time: bk.time, minutes: 60, studentIds: [sid], studentNames: [bk.name], status: 'scheduled', seriesId: null,

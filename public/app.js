@@ -114,6 +114,21 @@ const io = new IntersectionObserver(es => es.forEach(e => {
 }), { threshold: .12 });
 $$('.reveal').forEach(el => io.observe(el));
 
+/* ---------- LIFF：在 LINE 裡開預約頁時，帶入 LINE 名字並記下 LINE 身分（之後通知用） ---------- */
+let lineProfile = null;
+if (S.contact.liffId && (/[?&]book\b/.test(location.search) || /liff\.state|liffClientId/.test(location.search) || /Line\//i.test(navigator.userAgent))) {
+  (async () => {
+    try {
+      await new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
+      await window.liff.init({ liffId: S.contact.liffId });
+      if (!window.liff.isLoggedIn()) return;
+      lineProfile = await window.liff.getProfile();
+      const f = document.querySelector('#bookingForm');
+      if (f && !f.name.value) f.name.value = lineProfile.displayName.slice(0, 30);
+    } catch (e) { console.warn('LIFF', e); }
+  })();
+}
+
 /* ---------- booking ---------- */
 const quick = $('#quickLine');
 if (S.contact.lineOA) quick.href = `https://line.me/R/oaMessage/${S.contact.lineOA}/?${encodeURIComponent('教練你好，我想預約私人課 🥊\n想上課的時間：\n想練的項目：')}`;
@@ -201,7 +216,8 @@ form.addEventListener('submit', async e => {
   btn.disabled = true; btn.textContent = '送出中…';
   try {
     if (db) {
-      await fs.addDoc(fs.collection(db, 'bookings'), { ...data, status: 'pending', createdAt: fs.serverTimestamp() });
+      const line = lineProfile ? { lineUserId: lineProfile.userId, lineName: lineProfile.displayName.slice(0, 50) } : {};
+      await fs.addDoc(fs.collection(db, 'bookings'), { ...data, ...line, status: 'pending', createdAt: fs.serverTimestamp() });
     } else {
       console.info('[demo] booking (Firebase 尚未設定)', data);
     }

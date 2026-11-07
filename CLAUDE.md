@@ -3,7 +3,7 @@
 純靜態網站（無 build）＋ Firebase（Hosting / Firestore / Auth）。
 
 - `public/index.html` 形象網站＋私人課預約；`public/admin.html` 教練後台（只用 Google 登入；LINE/IG 內建瀏覽器不能用 Google 登入）：預約／課務扣堂／學員／網站內容
-- `public/admin-crm.js` 課務扣堂＋學員名冊（第一階段）：`students/{id}`（credits 剩餘堂數）＋`ledger` 子集合、`lessons/{id}`（studentIds 多人、status scheduled|done|cancelled、doneAtMs 24h 內可復原）。網站預約按確認 → 依電話找/建學員＋建 `lessons/bk_{bookingId}`。第二階段（LINE 綁定、扣堂通知、課前提醒、學員查堂數頁，需 Cloud Functions）、第三階段（定型化契約、退費試算、報表、Google 行事曆）尚未做
+- `public/admin-crm.js` 課務扣堂＋學員名冊（第一階段）：`students/{id}`（credits 剩餘堂數）＋`ledger` 子集合、`lessons/{id}`（studentIds 多人、status scheduled|done|cancelled、doneAtMs 24h 內可復原）。網站預約按確認 → 依電話找/建學員＋建 `lessons/bk_{bookingId}`。BookFast 式功能已加：`packages`（課程方案）、`sales`（銷售紀錄，報表用）、學員 expiresAt 到期日＋請假延期、tags 標籤、blocked 黑名單（預約卡片警告）、沉睡（60 天沒上課）、報表分頁。LIFF `2012453936-wvzYI7qS`（LINE Login channel 2012453936）→ 預約頁帶入 LINE 名字、booking 存 lineUserId，確認時寫進學員。第二階段（扣堂通知、課前提醒、候補通知、分群推播、學員查堂數頁，需 Cloud Functions）、第三階段（定型化契約、退費試算、報表、Google 行事曆）尚未做
 - 管理員：`admins/{uid}` 或 `admins/{已驗證 Email}` 有文件即可（firestore.rules／storage.rules 都認兩種）
 - 後台「網站內容」分頁可改聯絡方式、固定課表、私人課開放時段、休假日 → 存 Firestore `site/config`，前台載入後覆蓋 `data.js`（讀不到就用 data.js 預設）
 - `public/data.js` 預設資料：固定課表（取自海報 `../素材/20261107-180958_拳擊.jpg`）、聯絡方式（LINE @043ixcyx、IG _cwl1127._ 已填；電話待補）、私人課可預約時段

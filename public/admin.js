@@ -87,7 +87,7 @@ function card(b) {
   return `<div class="bk ${esc(b.status)}">
     <div>
       <div class="bk-when">${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${esc(b.time)}</div>
-      <div class="bk-who">${esc(b.name)}　<a href="tel:${tel}">📞 ${esc(b.phone)}</a>${b.lineId ? `　LINE：${esc(b.lineId)}` : ''}</div>
+      ${crm?.flag(b.phone) || ''}<div class="bk-who">${esc(b.name)}　<a href="tel:${tel}">📞 ${esc(b.phone)}</a>${b.lineId ? `　LINE：${esc(b.lineId)}` : ''}</div>
       <div class="bk-meta">${esc(b.who)}・${esc(b.level)}・${esc(b.people)} 人${b.goals?.length ? `・想練：${b.goals.map(esc).join('、')}` : ''}</div>
       ${b.note ? `<div class="bk-meta">📝 ${esc(b.note)}</div>` : ''}
     </div>
@@ -127,6 +127,8 @@ $('#views').addEventListener('click', e => {
   $('#contentView').hidden = b.dataset.v !== 'content';
   $('#lessonsView').hidden = b.dataset.v !== 'lessons';
   $('#studentsView').hidden = b.dataset.v !== 'students';
+  $('#reportView').hidden = b.dataset.v !== 'report';
+  if (b.dataset.v === 'report') crm?.renderReport();
   if (b.dataset.v === 'content' && !cfg) loadContent();
   if (b.dataset.v === 'content' && !photosLoaded) loadPhotos();
 });

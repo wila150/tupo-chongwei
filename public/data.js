@@ -2,7 +2,8 @@
 window.SITE = {
   contact: {
     line: 'https://line.me/R/ti/p/@043ixcyx', // LINE 官方帳號「突破Boxing」
-    lineOA: '@043ixcyx',  // 官方帳號 ID：預約完成用 oaMessage 預填訊息
+    lineOA: '@043ixcyx',
+    liffId: '2012453936-wvzYI7qS', // LINE Login channel 2012453936 的 LIFF（預約頁）  // 官方帳號 ID：預約完成用 oaMessage 預填訊息
     instagram: 'https://www.instagram.com/_cwl1127._/',
     phone: ''        // 例：0912345678 （待補）
   },

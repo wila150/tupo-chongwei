@@ -13,7 +13,9 @@ service cloud.firestore {
     // 學員送出預約：任何人可新增，但欄位要對
     match /bookings/{id} {
       allow create: if request.resource.data.keys().hasOnly(
-          ['goals','level','who','people','date','time','name','phone','lineId','note','status','createdAt'])
+          ['goals','level','who','people','date','time','name','phone','lineId','note','status','createdAt','lineUserId','lineName'])
+        && (!('lineUserId' in request.resource.data) || request.resource.data.lineUserId.matches('^U[0-9a-f]{32}$'))
+        && (!('lineName' in request.resource.data) || str(request.resource.data.lineName, 50))
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time
         && str(request.resource.data.name, 30) && request.resource.data.name.size() > 0
@@ -48,6 +50,8 @@ service cloud.firestore {
     match /lessons/{lid} {
       allow read, write: if isAdmin();
     }
+    match /packages/{id} { allow read, write: if isAdmin(); }
+    match /sales/{id} { allow read, write: if isAdmin(); }
 
     match /admins/{uid} {
       allow read: if request.auth != null && (request.auth.uid == uid || request.auth.token.email == uid);
