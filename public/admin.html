@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>教練後台｜突破重圍</title>
+  <link rel="icon" href="img/logo-mark.svg" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { padding: 1.2rem 4% 4rem; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+    .top .nav-brand img { width: 36px; height: 36px; }
+    .login { max-width: 360px; margin: 12vh auto; background: var(--ink-2); padding: 2rem; border-radius: var(--radius); border: 1px solid #2a2a2a; }
+    .login h1 { font-size: 1.4rem; margin-bottom: 1rem; text-align: center; }
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .tabs button { background: var(--ink-3); color: var(--paper); border: 1px solid #333; border-radius: 999px; padding: .4rem 1rem; cursor: pointer; font-family: inherit; }
+    .tabs button.active { background: var(--red); border-color: var(--red); }
+    .tabs b { font-family: var(--display); margin-left: .3rem; }
+    .list { display: grid; gap: .8rem; }
+    .bk { background: var(--ink-2); border: 1px solid #2a2a2a; border-left: 5px solid #555; border-radius: 12px; padding: 1rem 1.2rem; display: grid; grid-template-columns: 1fr auto; gap: .6rem 1rem; }
+    .bk.pending { border-left-color: #f0b429; }
+    .bk.confirmed { border-left-color: #2fbf71; }
+    .bk.cancelled { opacity: .55; }
+    .bk-when { font-family: var(--display); font-size: 1.25rem; }
+    .bk-who { font-weight: 700; }
+    .bk-meta { color: var(--muted); font-size: .9rem; }
+    .bk-actions { display: flex; flex-direction: column; gap: .4rem; align-items: stretch; }
+    .bk-actions .btn { padding: .4rem 1rem; font-size: .9rem; }
+    .empty { text-align: center; color: var(--muted); padding: 3rem 0; }
+    @media (max-width: 600px) { .bk { grid-template-columns: 1fr; } .bk-actions { flex-direction: row; } }
+  </style>
+</head>
+<body>
+  <div id="loginView" class="login" hidden>
+    <h1>教練後台登入</h1>
+    <form id="loginForm">
+      <label class="field">Email<input name="email" type="email" required autocomplete="username"></label>
+      <label class="field">密碼<input name="password" type="password" required autocomplete="current-password"></label>
+      <p class="form-error" id="loginError"></p>
+      <button class="btn btn-block">登入</button>
+    </form>
+  </div>
+
+  <div id="appView" hidden>
+    <div class="top">
+      <a href="./" class="nav-brand"><img src="img/logo-mark.svg" alt=""><span>預約管理</span></a>
+      <button class="btn btn-ghost btn-sm" id="logout">登出</button>
+    </div>
+    <div class="tabs" id="tabs">
+      <button data-f="pending" class="active">待確認<b id="cPending">0</b></button>
+      <button data-f="upcoming">即將上課<b id="cUpcoming">0</b></button>
+      <button data-f="past">已上過</button>
+      <button data-f="cancelled">已取消</button>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

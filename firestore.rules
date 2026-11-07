@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(db)/documents/admins/$(request.auth.uid));
+    }
+    function str(v, max) { return v is string && v.size() <= max; }
+
+    // 學員送出預約：任何人可新增，但欄位要對
+    match /bookings/{id} {
+      allow create: if request.resource.data.keys().hasOnly(
+          ['goals','level','who','people','date','time','name','phone','lineId','note','status','createdAt'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.name, 30) && request.resource.data.name.size() > 0
+        && str(request.resource.data.phone, 20) && request.resource.data.phone.size() >= 8
+        && str(request.resource.data.lineId, 40)
+        && str(request.resource.data.note, 500)
+        && str(request.resource.data.level, 20) && str(request.resource.data.who, 20)
+        && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.time.matches('^[0-9]{2}:[0-9]{2}$')
+        && request.resource.data.people is int && request.resource.data.people >= 1 && request.resource.data.people <= 3
+        && request.resource.data.goals is list && request.resource.data.goals.size() <= 10;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // 已確認的時段（只有日期時間，沒有個資）：公開讀，教練寫
+    match /busy/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+  }
+}
