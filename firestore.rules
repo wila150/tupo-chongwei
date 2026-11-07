@@ -50,7 +50,8 @@ service cloud.firestore {
     match /lessons/{lid} {
       allow read, write: if isAdmin();
     }
-    match /packages/{id} { allow read, write: if isAdmin(); }
+    match /packages/{id} { allow read: if true; allow write: if isAdmin(); } // 學員 App 顯示方案價格
+    match /notify/{id} { allow read, write: if isAdmin(); } // LINE 通知名單（Functions 寫入）
     match /sales/{id} { allow read, write: if isAdmin(); }
 
     match /admins/{uid} {

@@ -19,3 +19,5 @@
 - 預約人資料記在學員手機 localStorage `tupo_profile_v1`，回頭客收起個人資料欄（`.returning`），只選日期時段
 - `/?book`：只顯示預約表單（html 加 `book-only` class），給 LINE 圖文選單用
 - 網站預約完成 → 跳「等一下會打開 LINE」視窗，用 `https://line.me/R/oaMessage/@043ixcyx/?訊息` 預填；預約區上方另有「立即預約（LINE）」
+- 學員 LINE 預約 App：`public/member.html`＋`member.js`（LIFF `2012453936-jc7TPoii`）：綁定（姓名＋手機對學員）、週曆選時段→線上預約（伺服器扣 1 堂、lessons.paid=true、source=line、寫 busy）、我的課（上課前 12 小時可取消退堂）、方案（packages 公開讀）、我的（堂數紀錄）。後台：paid 的課完課不再扣、教練取消會退堂；教練排課也寫 busy
+- `functions/`（Node 22、asia-east1）：`api`（學員 App，用 LIFF ID token 向 LINE 驗證）、`lineWebhook`（「通知綁定 密碼」加入 `notify/config.lineUserIds`、「取消通知」、「查堂數」）、`onBookingCreated`（新預約通知）。設定在 `functions/.env`（不進 git）。部署：`firebase deploy --only functions`（第一次要先給 compute SA `roles/cloudbuild.builds.builder`）

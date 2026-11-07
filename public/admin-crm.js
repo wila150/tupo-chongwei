@@ -75,9 +75,10 @@ export function initCrm({ F, db, esc, $ }) {
     } else if (l.status === 'done' && now - (l.doneAtMs || 0) < UNDO_MS) {
       acts.push(`<button class="btn btn-ghost btn-sm" data-undo="${l.id}">復原扣堂</button>`);
     }
+    const src = l.source === 'line' ? ' <span class="tag line">LINE 預約・已扣堂</span>' : '';
     const badge = l.status === 'done' ? '<span class="tag ok">已扣堂</span>' : l.status === 'cancelled' ? '<span class="tag">已取消</span>' : '';
     return `<div class="bk ${l.status === 'done' ? 'confirmed' : l.status === 'cancelled' ? 'cancelled' : 'pending'}">
-      <div><div class="bk-when">${md(l.date)} ${esc(l.time)} <small class="muted">${l.minutes || 60} 分</small> ${badge}</div>
+      <div><div class="bk-when">${md(l.date)} ${esc(l.time)} <small class="muted">${l.minutes || 60} 分</small> ${badge}${src}</div>
       <div class="bk-who">${names}</div>${l.note ? `<div class="bk-meta">📝 ${esc(l.note)}</div>` : ''}</div>
       <div class="bk-actions">${acts.join('')}</div></div>`;
   };
@@ -105,19 +106,32 @@ export function initCrm({ F, db, esc, $ }) {
     try {
       if (t.deduct) await deduct(l);
       else if (t.undo) await undo(l);
-      else if (confirm(`取消 ${md(l.date)} ${l.time} 這堂課？（不會扣堂）`)) await F.updateDoc(F.doc(db, 'lessons', l.id), { status: 'cancelled' });
+      else if (confirm(`取消 ${md(l.date)} ${l.time} 這堂課？${l.paid ? '（學員線上預約時已扣 1 堂，會退回）' : '（不會扣堂）'}`)) {
+        const b = F.writeBatch(db);
+        b.update(F.doc(db, 'lessons', l.id), { status: 'cancelled', cancelledBy: 'coach' });
+        if (!lessons.some(x => x.id !== l.id && x.status === 'scheduled' && x.date === l.date && x.time === l.time)) b.delete(busyRef(l));
+        if (l.paid) for (const sid of l.studentIds) {
+          if (!byId(sid)) continue;
+          b.update(F.doc(db, 'students', sid), { credits: F.increment(1) });
+          b.set(F.doc(F.collection(db, 'students', sid, 'ledger')), { type: 'undo', delta: 1, lessonId: l.id, note: `教練取消 ${l.date} ${l.time}（退回）`, at: F.serverTimestamp() });
+        }
+        await b.commit();
+      }
     } catch (err) { alert('失敗：' + err.message); }
     e.target.disabled = false;
   });
 
+  const busyRef = l => F.doc(db, 'busy', `${l.date}_${l.time.replace(':', '')}`);
   async function deduct(l) {
     if (!l.studentIds.length) return alert('這堂課沒有學員，請先刪掉重排');
+    if (l.paid) { const b = F.writeBatch(db); b.update(F.doc(db, 'lessons', l.id), { status: 'done', doneAtMs: Date.now() }); return b.commit(); }
     const zero = l.studentIds.map(byId).filter(s => s && s.credits <= 0);
     const exp = l.studentIds.map(byId).filter(s => s && daysLeft(s) !== null && daysLeft(s) < 0);
     if (exp.length && !confirm(`${exp.map(s => `${s.name}（${s.expiresAt} 到期）`).join('、')} 方案已過期，仍要扣嗎？`)) return;
     if (zero.length && !confirm(`${zero.map(s => s.name).join('、')} 已經沒有剩餘堂數，仍要扣嗎？（會變成負數）`)) return;
     const b = F.writeBatch(db);
     b.update(F.doc(db, 'lessons', l.id), { status: 'done', doneAtMs: Date.now() });
+    if (l.paid) { await b.commit(); return; } // LINE 線上預約時已扣過
     for (const sid of l.studentIds) {
       if (!byId(sid)) continue;
       b.update(F.doc(db, 'students', sid), { credits: F.increment(-1) });
@@ -131,6 +145,7 @@ export function initCrm({ F, db, esc, $ }) {
     if (!confirm(`復原 ${md(l.date)} ${l.time} 的扣堂？堂數會加回去。`)) return;
     const b = F.writeBatch(db);
     b.update(F.doc(db, 'lessons', l.id), { status: 'scheduled', doneAtMs: F.deleteField() });
+    if (l.paid) { await b.commit(); return; }
     for (const sid of l.studentIds) {
       if (!byId(sid)) continue;
       b.update(F.doc(db, 'students', sid), { credits: F.increment(1) });
@@ -176,6 +191,7 @@ export function initCrm({ F, db, esc, $ }) {
     if (dates.length > 1 && !confirm(`會建立 ${dates.length} 堂課（${md(dates[0])} ～ ${md(dates.at(-1))}），確定？`)) return;
     const seriesId = dates.length > 1 ? `s${Date.now()}` : null;
     const b = F.writeBatch(db);
+    for (const d of dates) b.set(F.doc(db, 'busy', `${d}_${time.replace(':', '')}`), { date: d, time });
     for (const d of dates) b.set(F.doc(F.collection(db, 'lessons')), {
       date: d, time, minutes, studentIds: ids, studentNames: names, status: 'scheduled', seriesId, note: $('#lfNote').value.trim(), createdAt: F.serverTimestamp()
     });
