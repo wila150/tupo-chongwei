@@ -235,3 +235,9 @@ details p { color: var(--muted); margin-top: .6rem; }
   .side-social { top: auto; transform: none; bottom: 92px; right: 20px; }
   .side-btn { width: 56px; height: 56px; }
 }
+
+/* ?book 精簡預約頁（LINE 圖文選單用） */
+.book-only main > section:not(#booking), .book-only .footer, .book-only .side-social, .book-only .float-cta, .book-only .nav-links, .book-only .nav-toggle { display: none !important; }
+.book-only #booking { padding-top: 5.5rem; min-height: 100svh; }
+.book-only .quick-line { display: none; }
+.book-only .nav { background: rgba(14,14,14,.96); }
