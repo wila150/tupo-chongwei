@@ -75,8 +75,9 @@ export function initCrm({ F, db, esc, $ }) {
     const now = Date.now();
     const names = l.studentIds.map((id, i) => {
       const s = byId(id); const name = s?.name || l.studentNames?.[i] || '（已刪除）';
+      const att = l.attend?.[id] === 'yes' ? ' <span class="tag ok">✓ 準時到</span>' : l.attend?.[id] === 'leave' ? ' <span class="tag bad">請假</span>' : '';
       const low = s && s.credits <= RENEW_AT ? ` <span class="tag warn">剩 ${s.credits}</span>` : s ? ` <span class="tag">剩 ${s.credits}</span>` : '';
-      return esc(name) + low;
+      return esc(name) + low + att;
     }).join('、') || '<span class="muted">（未指定學員）</span>';
     const acts = [];
     if (l.status === 'scheduled') {

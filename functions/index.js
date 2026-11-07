@@ -4,7 +4,8 @@
 // - onBookingCreated：網站有新預約 → LINE 通知教練／管理員
 // 設定在 functions/.env（不進 git）：LINE_MSG_CHANNEL_ID、LINE_MSG_SECRET、LINE_LOGIN_CHANNEL_ID、NOTIFY_CODE
 import { onRequest } from 'firebase-functions/v2/https';
-import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -204,6 +205,7 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
   res.status(200).send('ok');
   for (const ev of req.body.events || []) {
     try {
+      if (ev.type === 'postback') { await onPostback(ev); continue; }
       if (ev.type !== 'message' || ev.message.type !== 'text') continue;
       const t = ev.message.text.trim(), uid = ev.source.userId;
       const m = /^通知綁定\s*(\S+)$/.exec(t);
@@ -226,4 +228,77 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
 export const onBookingCreated = onDocumentCreated('bookings/{id}', async ev => {
   const b = ev.data?.data(); if (!b) return;
   await notifyAdmins(`🥊 新的私人課預約（待確認）\n${md(b.date)} ${b.time}\n${b.name} ${b.phone}${b.people > 1 ? `・${b.people} 人` : ''}\n${(b.goals || []).join('、')}${b.note ? `\n📝 ${b.note}` : ''}\n👉 ${SITE}/admin`);
+});
+
+/* ---------- 上課前一晚提醒（每天 20:00 台灣時間） ---------- */
+function reminderCard(l, st) {
+  const btn = (label, data, color) => ({ type: 'button', style: color ? 'primary' : 'secondary', color, height: 'sm', action: { type: 'postback', label, data, displayText: label } });
+  return {
+    type: 'flex', altText: `明天 ${l.time} 有課喔！`,
+    contents: {
+      type: 'bubble', size: 'kilo',
+      header: { type: 'box', layout: 'vertical', backgroundColor: '#d7262e', paddingAll: '14px', contents: [{ type: 'text', text: '🥊 明天上課提醒', color: '#ffffff', weight: 'bold' }] },
+      body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: [
+        { type: 'text', text: `${md(l.date)} ${l.time}`, weight: 'bold', size: 'xl' },
+        { type: 'text', text: `${st.name}・私人課 ${l.minutes || 60} 分`, size: 'sm', color: '#555555' },
+        { type: 'text', text: `目前剩餘 ${st.credits || 0} 堂`, size: 'sm', color: '#888888' }
+      ] },
+      footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: [
+        btn('✅ 我會準時到', `attend=yes&l=${l.id}&s=${st.id}`, '#d7262e'),
+        btn('🙋 我要請假', `attend=leave&l=${l.id}&s=${st.id}`)
+      ] }
+    }
+  };
+}
+
+export const nightlyReminder = onSchedule({ schedule: '0 20 * * *', timeZone: 'Asia/Taipei' }, async () => {
+  const t = twNow(); t.setUTCDate(t.getUTCDate() + 1);
+  const tomorrow = twYmd(t);
+  const snap = await db.collection('lessons').where('date', '==', tomorrow).get();
+  let sent = 0;
+  const lines = [];
+  for (const d of snap.docs) {
+    const l = { id: d.id, ...d.data() };
+    if (l.status !== 'scheduled') continue;
+    const names = [];
+    for (const sid of l.studentIds || []) {
+      const s = await db.doc(`students/${sid}`).get();
+      if (!s.exists) continue;
+      const st = { id: s.id, ...s.data() };
+      names.push(st.name + (st.lineUserId ? '' : '（未綁 LINE）'));
+      if (st.lineUserId) { await push(st.lineUserId, [reminderCard(l, st)]); sent++; }
+    }
+    lines.push(`${l.time} ${names.join('、')}`);
+  }
+  if (lines.length) await notifyAdmins(`📋 明天 ${md(tomorrow)} 的課（已提醒 ${sent} 位學員）\n${lines.sort().join('\n')}`);
+  logger.info('reminders', tomorrow, sent);
+});
+
+async function onPostback(ev) {
+  const q = new URLSearchParams(ev.postback.data || '');
+  const attend = q.get('attend'), lid = q.get('l'), sid = q.get('s');
+  if (!attend || !lid || !sid) return;
+  const [lSnap, sSnap] = await Promise.all([db.doc(`lessons/${lid}`).get(), db.doc(`students/${sid}`).get()]);
+  if (!lSnap.exists || !sSnap.exists || sSnap.data().lineUserId !== ev.source.userId) return reply(ev.replyToken, [text('找不到這堂課，請直接聯絡教練')]);
+  const l = lSnap.data(), st = sSnap.data();
+  if (l.status !== 'scheduled') return reply(ev.replyToken, [text('這堂課已經有變動了，請直接聯絡教練')]);
+  await lSnap.ref.update({ [`attend.${sid}`]: attend, [`attendAt.${sid}`]: FieldValue.serverTimestamp() });
+  if (attend === 'yes') {
+    await reply(ev.replyToken, [text(`收到！${md(l.date)} ${l.time} 見 💪`)]);
+  } else {
+    await reply(ev.replyToken, [text('已經幫你通知教練，教練會再跟你確認 🙏')]);
+    await notifyAdmins(`🙋 請假：${st.name}\n${md(l.date)} ${l.time}\n（後台這堂課已標記請假，請決定要取消／改期）`);
+  }
+}
+
+/* ---------- 教練完課扣堂 → 通知學員 ---------- */
+export const onLessonDone = onDocumentUpdated('lessons/{id}', async ev => {
+  const before = ev.data.before.data(), after = ev.data.after.data();
+  if (before.status === 'done' || after.status !== 'done' || after.paid) return; // LINE 預約時已通知過
+  for (const sid of after.studentIds || []) {
+    const s = await db.doc(`students/${sid}`).get();
+    if (!s.exists || !s.data().lineUserId) continue;
+    const st = s.data();
+    await push(st.lineUserId, [card('✓ 完課・扣除 1 堂', [`${md(after.date)} ${after.time} 辛苦了！`, `剩餘 ${st.credits || 0} 堂${st.expiresAt ? `（${st.expiresAt} 到期）` : ''}`], '#2b2420')]);
+  }
 });

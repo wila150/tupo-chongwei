@@ -195,7 +195,8 @@ $('#bindForm').addEventListener('submit', async e => {
     idToken = window.liff.getIDToken();
     renderPlans(); renderWeek();
     await refreshMe();
-    if (me.bound) { $('#loading').hidden = true; go('book'); }
+    const tab = new URLSearchParams(location.search).get('tab');
+    if (me.bound) { $('#loading').hidden = true; go(['book', 'lessons', 'plans', 'me'].includes(tab) ? tab : 'book'); }
   } catch (err) {
     console.error(err);
     $('#loading').innerHTML = `無法載入：${esc(err.message)}<br><br><a class="btn btn-ghost" href="./?book">改用網頁預約</a>`;

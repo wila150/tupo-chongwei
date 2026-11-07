@@ -16,9 +16,10 @@
 - 網址不帶 .html（firebase.json cleanUrls）：後台 `/admin`、學員 App `/member`
 - 部署：`./deploy.sh`（會自動替 CSS/JS 換版本號，不要直接 firebase deploy）
 - Logo 已改用白色剪影熊頭像（`素材/20261107-201604_疤眼熊拳手頭像.png` 去背 → `public/img/logo-bear.png`、`icon-192.png`、`apple-touch-icon.png`）；舊 svg Logo 不再使用
-- LINE 官方帳號「突破Boxing」`@043ixcyx`（Messaging API channel 2012453121，secret 不進 git）。`line/`：圖文選單原稿 `richmenu.html` → `richmenu.jpg`（2500×1686）、區塊設定 `richmenu.json`、大頭貼 `line-avatar.png`。目前預設選單 `richmenu-bc4d1d0ef5beb552c80d94380ef1db29`（左格「預約私人課」→ 學員 App LIFF）
+- LINE 官方帳號「突破Boxing」`@043ixcyx`（Messaging API channel 2012453121，secret 不進 git）。`line/`：圖文選單原稿 `richmenu.html` → `richmenu.jpg`（2500×1686）、區塊設定 `richmenu.json`、大頭貼 `line-avatar.png`。目前預設選單 6 格 `richmenu-d7bc91c10b3a485ae8998dd8fd5ea131`（原稿 `line/richmenu6.html`／`.json`）：預約私人課（學員 App）、我的堂數（App ?tab=me）、固定課表、首次體驗（/?book）、關於教練、聯絡教練（傳訊息）
 - 預約人資料記在學員手機 localStorage `tupo_profile_v1`，回頭客收起個人資料欄（`.returning`），只選日期時段
 - `/?book`：只顯示預約表單（html 加 `book-only` class），給 LINE 圖文選單用
 - 網站預約完成 → 跳「等一下會打開 LINE」視窗，用 `https://line.me/R/oaMessage/@043ixcyx/?訊息` 預填；預約區上方另有「立即預約（LINE）」
 - 學員 LINE 預約 App：`public/member.html`＋`member.js`（LIFF `2012453936-jc7TPoii`）：綁定（姓名＋手機對學員）、週曆選時段→線上預約（伺服器扣 1 堂、lessons.paid=true、source=line、寫 busy）、我的課（上課前 12 小時可取消退堂）、方案（packages 公開讀）、我的（堂數紀錄）。後台：paid 的課完課不再扣、教練取消會退堂；教練排課也寫 busy
 - `functions/`（Node 22、asia-east1）：`api`（學員 App，用 LIFF ID token 向 LINE 驗證）、`lineWebhook`（「通知綁定 密碼」加入 `notify/config.lineUserIds`、「取消通知」、「查堂數」）、`onBookingCreated`（新預約通知）。設定在 `functions/.env`（不進 git）。部署：`firebase deploy --only functions`（第一次要先給 compute SA `roles/cloudbuild.builds.builder`）
+- 自動推播：`nightlyReminder` 每天 20:00（台灣）推明天的課提醒卡（✅準時到／🙋請假 postback → lessons.attend.{sid}，請假會通知管理員）並傳明日課表給管理員；`onLessonDone` 教練完課扣堂（非 paid）→ 傳剩餘堂數給學員
