@@ -37,4 +37,4 @@
 - 首頁主圖/背景位置：後台「網站內容」→「首頁主圖與背景位置」面板（拖曳＋滑桿）→ `site/config.heroArt {x,y,zoom}`、`heroBg {url,x,y,zoom,dim}`；前台 app.js applyHero() 用 object-position＋scale 套用（背景 img.hero-bear）；後台預覽＝iframe 載入真首頁（用電腦螢幕寬高縮放），postMessage {type:heroPreview} 即時套用
 - 手機＋有首頁主圖（.hero.has-art）：上下排，上方熊在左（.hero-bear 62% 寬）、照片在右（74% 寬），文字在下
 - 手機首頁＝剛好一個螢幕（100svh，照片 flex 吃剩餘高度、文字按鈕固定在下）；首頁按鈕看得到時隱藏右側浮動 LINE/IG/預約（body.hero-cta-on）
-- 後台「網站內容」：最上方快速跳轉列（#cJump），照片相簿排第一；手機上每格是一行（縮圖＋按鈕），「管理相簿」＝全螢幕編輯（CSS .ph.open fixed；‹ 返回、★ 設封面、底部固定加照片）
+- 後台「網站內容」：每個 panel 由 admin.js 包成下拉式（.acc，一次開一區，META 設圖示/標題/說明），照片相簿排第一；手機上每格是一行（縮圖＋按鈕），「管理相簿」＝全螢幕編輯（CSS .ph.open fixed；‹ 返回、★ 設封面、底部固定加照片）

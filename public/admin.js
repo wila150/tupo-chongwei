@@ -745,3 +745,30 @@ $('#hbReset').addEventListener('click', () => { if (hbWhich === 'art') heroArt =
   const end = () => { if (st) { st = null; saveHb(); } };
   pv.addEventListener('pointerup', end); pv.addEventListener('pointercancel', end);
 })();
+
+/* ---------- 網站內容：每區收成下拉式，一次只開一區 ---------- */
+(() => {
+  const META = {
+    cPhotos: ['🖼', '照片相簿', '教練照、訓練照片、首頁主圖'],
+    cHero: ['🐻', '首頁主圖位置', '調整主圖和背景熊的位置'],
+    cReels: ['▶', 'IG 影片', '首頁「訓練影片」輪播'],
+    cContact: ['☎', '聯絡方式', 'LINE、IG、電話'],
+    cClasses: ['📅', '固定課表', '首頁課表'],
+    cBooking: ['⏰', '私人課預約時段', '開放時段、幾天內可預約'],
+    cOff: ['🌴', '休假日', '整天不開放預約的日期']
+  };
+  const panels = [...document.querySelectorAll('#contentView > .panel[id]')];
+  panels.forEach(p => {
+    const m = META[p.id]; if (!m) return;
+    const body = document.createElement('div'); body.className = 'acc-b';
+    while (p.firstChild) body.appendChild(p.firstChild);
+    const h = document.createElement('button'); h.type = 'button'; h.className = 'acc-h';
+    h.innerHTML = `<span class="acc-ic">${m[0]}</span><div><b>${m[1]}</b><small>${m[2]}</small></div>`;
+    p.classList.add('acc'); p.append(h, body);
+    h.addEventListener('click', () => {
+      const open = !p.classList.contains('open');
+      panels.forEach(x => x.classList.remove('open'));
+      if (open) { p.classList.add('open'); setTimeout(() => p.scrollIntoView({ block: 'start', behavior: 'smooth' }), 30); if (p.id === 'cHero') setTimeout(drawHb, 50); }
+    });
+  });
+})();

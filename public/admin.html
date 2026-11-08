@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="theme-color" content="#0e0e0e">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611081706">
+  <link rel="stylesheet" href="styles.css?v=202611081708">
   <style>
     body { padding: 0; }
     [hidden] { display: none !important; }
@@ -37,6 +37,7 @@
     .panel h2 { font-size: 1.15rem; margin-bottom: .3rem; }
     .panel .hint { color: var(--muted); font-size: .88rem; margin-bottom: 1rem; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem 1rem; }
+    .cls > * { min-width: 0; }
     .cls { display: grid; grid-template-columns: 90px 140px 140px 1fr 1fr 1fr 40px; gap: .5rem; align-items: center; margin-bottom: .5rem; }
     .cls input, .cls select, .num input { width: 100%; background: var(--ink); color: var(--paper); border: 1px solid #333; border-radius: 8px; padding: .5rem .6rem; font: inherit; font-size: .95rem; }
     .cls-head { color: var(--muted); font-size: .8rem; }
@@ -286,6 +287,20 @@
       .photos .ph:not(.open) .ph-actions .btn { padding: .35rem .7rem; font-size: .8rem; }
       .ph.open .alb-list { grid-template-columns: repeat(2, 1fr); padding: .8rem; gap: .6rem; }
     }
+    /* 網站內容：下拉式（一次開一區） */
+    #contentView .panel.acc { padding: 0; overflow: hidden; }
+    .acc-h { width: 100%; display: flex; align-items: center; gap: .8rem; background: none; border: 0; color: var(--paper); text-align: left; padding: 1rem 1.2rem; cursor: pointer; font: inherit; }
+    .acc-h .acc-ic { width: 38px; height: 38px; border-radius: 10px; background: var(--ink-3, #222); display: grid; place-items: center; font-size: 1.15rem; flex: none; }
+    .acc-h div { flex: 1; min-width: 0; }
+    .acc-h b { display: block; font-size: 1.02rem; }
+    .acc-h small { display: block; color: var(--muted); font-size: .8rem; margin-top: .1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .acc-h::after { content: ''; width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s; margin-right: .3rem; flex: none; }
+    .acc.open .acc-h::after { transform: rotate(-135deg); }
+    .acc.open .acc-h { border-bottom: 1px solid #262626; }
+    .acc-b { display: none; padding: 1rem 1.2rem 1.3rem; }
+    .acc.open .acc-b { display: block; }
+    .acc-b > h2:first-child { display: none; }
+    #contentView .panel.acc { margin-bottom: .7rem; }
     .savebar { position: sticky; bottom: 0; background: rgba(14,14,14,.95); padding: 1rem 0; display: flex; gap: 1rem; align-items: center; border-top: 1px solid #2a2a2a; }
     .savebar .msg { color: var(--muted); }
     @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .cls { grid-template-columns: 1fr 1fr; padding: .8rem; border: 1px solid #2a2a2a; border-radius: 10px; } .cls-head { display: none; } .cls .del { grid-column: 1 / -1; } }
@@ -454,7 +469,6 @@
     </div>
 
     <div id="contentView" hidden>
-      <nav class="jump" id="cJump"><a href="#cPhotos">照片相簿</a><a href="#cHero">首頁主圖</a><a href="#cReels">IG 影片</a><a href="#cContact">聯絡方式</a><a href="#cClasses">固定課表</a><a href="#cBooking">預約時段</a><a href="#cOff">休假日</a></nav>
       <div class="panel" id="cPhotos">
         <h2>照片</h2>
         <p class="hint">照片可以直接上傳，也可以按「從媒體庫選」挑已經上傳過的。每個位置都是一本相簿：網站上點封面會進到<b>相簿頁</b>（照片牆＋IG Reels）。按「管理相簿」可以寫說明、加 Reels、排照片順序（<b>第一張是封面</b>）。改動<b>馬上生效</b>，不用按下面的儲存。</p>
@@ -531,7 +545,7 @@
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611081706"></script>
-  <script type="module" src="admin.js?v=202611081706"></script>
+  <script src="data.js?v=202611081708"></script>
+  <script type="module" src="admin.js?v=202611081708"></script>
 </body>
 </html>
