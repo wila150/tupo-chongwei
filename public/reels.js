@@ -35,7 +35,7 @@ window.renderReels = function (box, urls, covers) {
 };
 
 // IG 嵌入框載好會回傳總高度（MEASURE）。總高 = 上方帳號列 54 + 影片 + 下方固定 130 左右（按讚、留言）。
-// 用它推算這支影片的比例（4:5、1:1、16:9、1.91:1），只露出影片本身、置中放在固定大小的黑框裡，扁的影片上下留黑邊。
+// 用它推算這支影片的比例（4:5、1:1、16:9、1.91:1），只露出影片本身；扁的影片等比放大填滿固定大小的框（左右裁掉），每張都滿版。
 (function () {
   var RATIOS = [1.25, 1, 0.5625, 0.5236];
   addEventListener('message', function (e) {
@@ -46,7 +46,11 @@ window.renderReels = function (box, urls, covers) {
     if (!f) return;
     var clip = f.parentNode, w = clip.clientWidth, raw = (d.details.height - 54 - 130) / w;
     var r = RATIOS.filter(function (x) { return x <= raw + 0.02; })[0] || RATIOS[RATIOS.length - 1];
-    clip.style.height = Math.min(r, 1.25) * 100 / 1.25 + '%';
+    // 扁的影片放大到填滿框（左右裁掉），每張卡都滿版
+    var k = 1.25 / Math.min(r, 1.25);
     f.style.height = d.details.height + 'px';
+    f.style.transformOrigin = '50% 0';
+    f.style.transform = k > 1.01 ? 'scale(' + k + ')' : '';
+    f.style.top = (-54 * k) + 'px';
   });
 })();
