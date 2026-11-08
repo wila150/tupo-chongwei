@@ -294,6 +294,7 @@ function renderSlot(id) {
   const s = SLOTS.find(x => x.id === id), card = $(`.ph[data-slot="${id}"]`), list = albums[id] || [];
   const open = card.classList.contains('open');
   card.innerHTML = `
+    <div class="alb-head"><button type="button" class="alb-back" data-manage>‹ 返回</button><b>${esc(albumTitles[id] || s.name)}</b><small class="muted">${list.length} 張・${(albumReels[id] || []).length} 影片</small></div>
     <div class="ph-img" style="${list[0] ? `background-image:url('${list[0].url}')` : ''}">${list[0] ? '' : '尚未上傳'}${list.length > 1 ? `<span class="cnt">📷 ${list.length} 張</span>` : ''}</div>
     <div class="ph-body"><b>${s.name}</b><small>${s.where}</small>
       ${s.single ? '' : `<input class="inp" data-title value="${esc(albumTitles[id] || '')}" placeholder="相簿名稱（例：比賽紀錄）" maxlength="20">`}
@@ -310,7 +311,7 @@ function renderSlot(id) {
     ${open && !s.single ? `<div class="alb-list">${list.map((g, i) => `<div class="gal-item">
       <div class="ph-img" style="background-image:url('${g.url}')">${i === 0 ? '<span class="cnt">封面</span>' : ''}</div>
       <input data-cap="${i}" value="${esc(g.caption || '')}" placeholder="說明" maxlength="60">
-      <div class="gal-acts"><button data-move="${i}" data-d="-1" title="往前">←</button><button data-move="${i}" data-d="1" title="往後">→</button><button data-del="${i}" title="刪除">✕</button></div>
+      <div class="gal-acts">${i ? `<button data-tocover="${i}" title="設為封面">★</button>` : ''}<button data-move="${i}" data-d="-1" title="往前">←</button><button data-move="${i}" data-d="1" title="往後">→</button><button data-del="${i}" title="刪除">✕</button></div>
     </div>`).join('')}</div>` : ''}`;
 }
 
@@ -370,7 +371,7 @@ $('#photoGrid').addEventListener('change', async e => {
 $('#photoGrid').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
   const card = b.closest('.ph'), id = card.dataset.slot, list = albums[id] || [];
-  if (b.matches('[data-manage]')) { card.classList.toggle('open'); renderSlot(id); return; }
+  if (b.matches('[data-manage]')) { card.classList.toggle('open'); document.body.style.overflow = card.classList.contains('open') ? 'hidden' : ''; renderSlot(id); if (!card.classList.contains('open')) card.scrollIntoView({ block: 'nearest' }); return; }
   if (b.matches('[data-pick]')) {
     const s = SLOTS.find(x => x.id === id);
     const picked = await openPicker({ single: !!s.single, title: `加到「${albumTitles[id] || s.name}」` });
@@ -395,6 +396,10 @@ $('#photoGrid').addEventListener('click', async e => {
     const old = list.splice(0); await saveAlbum(id).catch(() => {}); old.forEach(g => g.path && ST.deleteObject(ST.ref(storage, g.path)).catch(() => {}));
     renderSlot(id); return;
   }
+  if (b.dataset.tocover !== undefined) {
+    const [g] = list.splice(Number(b.dataset.tocover), 1); list.unshift(g);
+    await saveAlbum(id).catch(() => {}); renderSlot(id); slotMsg($(`.ph[data-slot="${id}"]`), '已設為封面 ✓'); return;
+  }
   if (b.dataset.move !== undefined) {
     const i = Number(b.dataset.move), j = i + Number(b.dataset.d);
     if (j < 0 || j >= list.length) return;
@@ -404,7 +409,7 @@ $('#photoGrid').addEventListener('click', async e => {
     if (!confirm('刪除這張照片？')) return;
     const [g] = list.splice(Number(b.dataset.del), 1);
     await saveAlbum(id).catch(() => {}); if (g.path) ST.deleteObject(ST.ref(storage, g.path)).catch(() => {});
-    if (!list.length) card.classList.remove('open');
+    if (!list.length) { card.classList.remove('open'); document.body.style.overflow = ''; }
     renderSlot(id);
   }
 });

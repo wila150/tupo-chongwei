@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="theme-color" content="#0e0e0e">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611081701">
+  <link rel="stylesheet" href="styles.css?v=202611081706">
   <style>
     body { padding: 0; }
     [hidden] { display: none !important; }
@@ -251,6 +251,41 @@
     .hb-ctl { display: grid; gap: .7rem; }
     .hb-ctl label { display: grid; grid-template-columns: 3rem 1fr; align-items: center; gap: .6rem; font-size: .9rem; color: var(--muted); }
     .hb-ctl input[type=range] { width: 100%; accent-color: var(--red); }
+    .jump { position: sticky; top: 0; z-index: 6; display: flex; gap: .4rem; overflow-x: auto; scrollbar-width: none; padding: .5rem 0 .7rem; margin-bottom: .4rem; background: rgba(14,14,14,.96); }
+    .jump::-webkit-scrollbar { display: none; }
+    .jump a { flex: none; padding: .4rem .9rem; border-radius: 999px; border: 1px solid #333; background: var(--ink-2); color: var(--paper); text-decoration: none; font-size: .85rem; }
+    .jump a:hover { border-color: var(--red); }
+    #contentView .panel { scroll-margin-top: 4rem; }
+    /* 相簿編輯：打開時變成全螢幕（手機）／置中大視窗（電腦） */
+    .alb-head { display: none; }
+    .photos .ph.open { position: fixed; inset: 0; z-index: 150; margin: 0; border: 0; border-radius: 0; overflow-y: auto; display: block; background: var(--ink); padding-bottom: 5.5rem; }
+    @media (min-width: 761px) { .photos .ph.open { inset: 4vh 8vw; border: 1px solid #333; border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.7); } body:has(.ph.open)::after { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 149; } }
+    .photos .ph.open { display: flex; flex-direction: column; }
+    .ph.open .alb-head { order: 0; } .ph.open .ph-body { order: 1; } .ph.open .alb-list { order: 2; } .ph.open .alb-extra { order: 3; border-top: 1px solid #262626; padding-top: 1rem; }
+    .alb-extra [data-addreel] { white-space: nowrap; flex: none; }
+    .ph.open .alb-head { display: flex; align-items: center; gap: .8rem; position: sticky; top: 0; z-index: 3; background: rgba(14,14,14,.97); padding: .8rem 1rem; border-bottom: 1px solid #262626; }
+    .ph.open .alb-head b { font-size: 1.05rem; flex: 1; }
+    .alb-back { background: none; border: 1px solid #444; color: var(--paper); border-radius: 999px; padding: .45rem 1rem; font: inherit; font-weight: 700; cursor: pointer; }
+    .ph.open > .ph-img { display: none; }
+    .ph.open .ph-body > b, .ph.open .ph-body > small { display: none; }
+    .ph.open .ph-body { padding: 1rem; }
+    .ph.open .ph-actions { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; padding: .8rem 1rem calc(.8rem + env(safe-area-inset-bottom)); background: rgba(14,14,14,.97); border-top: 1px solid #262626; display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+    @media (min-width: 761px) { .ph.open .ph-actions { position: sticky; } }
+    .ph.open .ph-actions .btn { padding: .75rem; font-size: .95rem; text-align: center; justify-content: center; }
+    .ph.open .ph-actions [data-manage] { display: none; }
+    .ph.open .alb-list { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .7rem; padding: 1rem; }
+    .ph.open .gal-acts button { padding: .7rem 0; font-size: 1.05rem; }
+    .gal-acts button[data-tocover] { color: #f0b429; }
+    @media (max-width: 760px) {
+      .photos { grid-template-columns: 1fr; gap: .6rem; }
+      .photos .ph:not(.open) { display: grid; grid-template-columns: 96px 1fr; }
+      .photos .ph:not(.open) > .ph-img { aspect-ratio: auto; height: 100%; min-height: 96px; font-size: .7rem; }
+      .photos .ph:not(.open) .ph-img .cnt { right: .3rem; bottom: .3rem; font-size: .65rem; }
+      .photos .ph:not(.open) .ph-body { padding: .6rem .7rem; gap: .35rem; }
+      .photos .ph:not(.open) [data-title] { display: none; }
+      .photos .ph:not(.open) .ph-actions .btn { padding: .35rem .7rem; font-size: .8rem; }
+      .ph.open .alb-list { grid-template-columns: repeat(2, 1fr); padding: .8rem; gap: .6rem; }
+    }
     .savebar { position: sticky; bottom: 0; background: rgba(14,14,14,.95); padding: 1rem 0; display: flex; gap: 1rem; align-items: center; border-top: 1px solid #2a2a2a; }
     .savebar .msg { color: var(--muted); }
     @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .cls { grid-template-columns: 1fr 1fr; padding: .8rem; border: 1px solid #2a2a2a; border-radius: 10px; } .cls-head { display: none; } .cls .del { grid-column: 1 / -1; } }
@@ -419,60 +454,14 @@
     </div>
 
     <div id="contentView" hidden>
-      <div class="panel">
-        <h2>聯絡方式</h2>
-        <p class="hint">留空的項目，網站上就不會出現那顆按鈕。</p>
-        <div class="grid2">
-          <label class="field">LINE 官方帳號 ID<input id="cLineOA" placeholder="@043ixcyx"></label>
-          <label class="field">Instagram 網址<input id="cIg" placeholder="https://www.instagram.com/..."></label>
-          <label class="field">電話<input id="cPhone" inputmode="tel" placeholder="0912345678"></label>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h2>固定課表</h2>
-        <p class="hint">首頁「固定課表」會照這裡顯示；這些時段前後也不會開放私人課預約。</p>
-        <div class="cls cls-head"><span>星期</span><span>開始</span><span>結束</span><span>地點</span><span>課程名稱</span><span>地區／說明</span><span></span></div>
-        <div id="clsList"></div>
-        <button type="button" class="btn btn-ghost btn-sm" id="addCls">＋ 新增一堂課</button>
-      </div>
-
-      <div class="panel">
-        <h2>私人課預約設定</h2>
-        <p class="hint">點時間切換開放／關閉（紅色＝開放）。</p>
-        <div class="times" id="timeGrid"></div>
-        <div class="grid2 num" style="margin-top:1rem">
-          <label class="field">開放預約未來幾天<input id="bDays" type="number" min="1" max="90"></label>
-          <label class="field">最晚幾小時前要預約<input id="bMinH" type="number" min="0" max="168"></label>
-          <label class="field">團課前後保留時間（分鐘）<input id="bBuf" type="number" min="0" max="180" step="5"></label>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h2>休假日</h2>
-        <p class="hint">加入的日期整天不開放私人課預約。</p>
-        <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center"><input type="date" id="offDate" class="field" style="background:var(--ink);color:var(--paper);border:1px solid #333;border-radius:8px;padding:.5rem .6rem;font:inherit"><button type="button" class="btn btn-ghost btn-sm" id="addOff" style="padding:.5rem 1.2rem">加入</button></div>
-        <div class="chips-del" id="offList"></div>
-      </div>
-
-      <div class="panel">
-        <h2>IG 影片（作品集）</h2>
-        <p class="hint">在 IG 的 Reels 按「分享 → 複製連結」，貼到下面按加入。左邊的「封面」可以從媒體庫挑一張圖當影片封面（建議每支都設，網站上大小會一致、載入也比較快；封面立刻生效）。網站會照這個順序排；沒有影片時這區不會出現。改完記得按最下面的儲存。</p>
-        <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem">
-          <input id="reelUrl" placeholder="https://www.instagram.com/reel/..." style="flex:1;min-width:220px;background:var(--ink);color:var(--paper);border:1px solid #333;border-radius:8px;padding:.55rem .7rem;font:inherit">
-          <button type="button" class="btn btn-ghost btn-sm" id="addReel" style="padding:.5rem 1.2rem">加入</button>
-        </div>
-        <p class="form-error" id="reelErr"></p>
-        <div id="reelRows"></div>
-      </div>
-
-      <div class="panel">
+      <nav class="jump" id="cJump"><a href="#cPhotos">照片相簿</a><a href="#cHero">首頁主圖</a><a href="#cReels">IG 影片</a><a href="#cContact">聯絡方式</a><a href="#cClasses">固定課表</a><a href="#cBooking">預約時段</a><a href="#cOff">休假日</a></nav>
+      <div class="panel" id="cPhotos">
         <h2>照片</h2>
         <p class="hint">照片可以直接上傳，也可以按「從媒體庫選」挑已經上傳過的。每個位置都是一本相簿：網站上點封面會進到<b>相簿頁</b>（照片牆＋IG Reels）。按「管理相簿」可以寫說明、加 Reels、排照片順序（<b>第一張是封面</b>）。改動<b>馬上生效</b>，不用按下面的儲存。</p>
         <div class="photos" id="photoGrid"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="cHero">
         <h2>首頁主圖與背景（熊）位置</h2>
         <p class="hint">先選要調整「主圖」（上面「首頁主圖」上傳的照片）還是「背景」（預設是熊，可以從媒體庫換別張），再在預覽圖上<b>直接拖曳</b>或用滑桿調整，<b>改了馬上生效</b>。手機上背景會自動再淡一點。</p>
         <div class="tabs" id="hbWhich"><button type="button" data-w="art" class="active">主圖（紅衣服那張）</button><button type="button" data-w="bg">背景（熊）</button></div>
@@ -489,13 +478,60 @@
         </div>
       </div>
 
+      <div class="panel" id="cReels">
+        <h2>IG 影片（作品集）</h2>
+        <p class="hint">在 IG 的 Reels 按「分享 → 複製連結」，貼到下面按加入。左邊的「封面」可以從媒體庫挑一張圖當影片封面（建議每支都設，網站上大小會一致、載入也比較快；封面立刻生效）。網站會照這個順序排；沒有影片時這區不會出現。改完記得按最下面的儲存。</p>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem">
+          <input id="reelUrl" placeholder="https://www.instagram.com/reel/..." style="flex:1;min-width:220px;background:var(--ink);color:var(--paper);border:1px solid #333;border-radius:8px;padding:.55rem .7rem;font:inherit">
+          <button type="button" class="btn btn-ghost btn-sm" id="addReel" style="padding:.5rem 1.2rem">加入</button>
+        </div>
+        <p class="form-error" id="reelErr"></p>
+        <div id="reelRows"></div>
+      </div>
+
+      <div class="panel" id="cContact">
+        <h2>聯絡方式</h2>
+        <p class="hint">留空的項目，網站上就不會出現那顆按鈕。</p>
+        <div class="grid2">
+          <label class="field">LINE 官方帳號 ID<input id="cLineOA" placeholder="@043ixcyx"></label>
+          <label class="field">Instagram 網址<input id="cIg" placeholder="https://www.instagram.com/..."></label>
+          <label class="field">電話<input id="cPhone" inputmode="tel" placeholder="0912345678"></label>
+        </div>
+      </div>
+
+      <div class="panel" id="cClasses">
+        <h2>固定課表</h2>
+        <p class="hint">首頁「固定課表」會照這裡顯示；這些時段前後也不會開放私人課預約。</p>
+        <div class="cls cls-head"><span>星期</span><span>開始</span><span>結束</span><span>地點</span><span>課程名稱</span><span>地區／說明</span><span></span></div>
+        <div id="clsList"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="addCls">＋ 新增一堂課</button>
+      </div>
+
+      <div class="panel" id="cBooking">
+        <h2>私人課預約設定</h2>
+        <p class="hint">點時間切換開放／關閉（紅色＝開放）。</p>
+        <div class="times" id="timeGrid"></div>
+        <div class="grid2 num" style="margin-top:1rem">
+          <label class="field">開放預約未來幾天<input id="bDays" type="number" min="1" max="90"></label>
+          <label class="field">最晚幾小時前要預約<input id="bMinH" type="number" min="0" max="168"></label>
+          <label class="field">團課前後保留時間（分鐘）<input id="bBuf" type="number" min="0" max="180" step="5"></label>
+        </div>
+      </div>
+
+      <div class="panel" id="cOff">
+        <h2>休假日</h2>
+        <p class="hint">加入的日期整天不開放私人課預約。</p>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center"><input type="date" id="offDate" class="field" style="background:var(--ink);color:var(--paper);border:1px solid #333;border-radius:8px;padding:.5rem .6rem;font:inherit"><button type="button" class="btn btn-ghost btn-sm" id="addOff" style="padding:.5rem 1.2rem">加入</button></div>
+        <div class="chips-del" id="offList"></div>
+      </div>
+
       <div class="savebar"><button type="button" class="btn" id="saveContent">儲存並更新網站</button><span class="msg" id="saveMsg"></span></div>
     </div>
     </section>
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611081701"></script>
-  <script type="module" src="admin.js?v=202611081701"></script>
+  <script src="data.js?v=202611081706"></script>
+  <script type="module" src="admin.js?v=202611081706"></script>
 </body>
 </html>
