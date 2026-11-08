@@ -34,3 +34,4 @@
 - 首頁照片格：相簿多張時每 7 秒淡入輪播（app.js slotSlideshow，三格錯開，滑鼠移上去/看不到時暫停），左上小圓點
 - Reels 一律「到 IG 觀看」（使用者決定）：iframe 只當預覽（pointer-events:none），整張卡是 IG 連結；扁的以頂端放大填滿
 - 首頁主圖（slot hero）：上傳的照片放右邊 .hero-art（原熊位置），熊改當 .hero-bg 背景（壓暗、.bear-bg）；沒上傳＝原樣
+- 首頁主圖/背景位置：後台「網站內容」→「首頁主圖與背景位置」面板（拖曳＋滑桿）→ `site/config.heroArt {x,y,zoom}`、`heroBg {url,x,y,zoom,dim}`；前台 app.js 用 object-position＋scale 套用（背景 img.hero-bear）

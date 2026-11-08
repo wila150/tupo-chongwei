@@ -311,16 +311,15 @@ a.reel-frame { display: block; cursor: pointer; }
 a.reel-frame:hover .reel-clip { filter: brightness(1.12); }
 
 /* 首頁上傳主圖：照片在右、熊在背景 */
-.hero-bg.bear-bg { background-position: 70% 20%; opacity: .5; }
 .hero-art.is-photo img { object-position: center; }
-@media (max-width: 760px) { .hero-bg.bear-bg { opacity: .18; } }
 /* 熊在最底層：照片完全蓋在熊上面（手機也不透明），熊只在照片以外的地方隱約看到 */
 .hero-art.is-photo { z-index: 0; }
-.hero-bg.bear-bg { z-index: -1; background-position: center bottom; }
+.hero-bg.bear-bg { z-index: -1; background: var(--ink); }
+.hero-bear { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--x) var(--y); transform: scale(var(--z)); transform-origin: var(--x) var(--y); opacity: var(--o); }
 .hero { isolation: isolate; }
 @media (max-width: 760px) {
   .hero-art.is-photo { opacity: .7; }
-  .hero-bg.bear-bg { opacity: .22; background-size: 120% auto; background-repeat: no-repeat; background-color: var(--ink); }
+  .hero-bear { opacity: calc(var(--o) * .45); }
 }
 /* 熊不要透過照片（紅外套）：照片不透明、左邊淡出只留一小段 */
 .hero-art.is-photo img { -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%), linear-gradient(0deg, transparent 0%, #000 18%); mask-image: linear-gradient(90deg, transparent 0%, #000 14%), linear-gradient(0deg, transparent 0%, #000 18%); }

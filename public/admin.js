@@ -280,15 +280,17 @@ async function loadPhotos() {
   try {
     const snap = await F.getDoc(F.doc(db, 'site', 'config'));
     const d = snap.exists() ? snap.data() : {};
-    albums = d.albums || {}; albumTitles = d.albumTitles || {}; albumDesc = d.albumDesc || {}; albumReels = d.albumReels || {}; legacyPhotos = d.photos || {}; reelCovers = d.reelCovers || reelCovers;
+    albums = d.albums || {}; albumTitles = d.albumTitles || {}; albumDesc = d.albumDesc || {}; albumReels = d.albumReels || {}; legacyPhotos = d.photos || {}; reelCovers = d.reelCovers || reelCovers; heroBg = { ...HB0, ...(d.heroBg || {}) }; heroArt = { ...HA0, ...(d.heroArt || {}) };
   } catch {}
   // 舊版單張照片轉成相簿第一張
   for (const s of SLOTS) if (!albums[s.id]?.length && legacyPhotos[s.id]) albums[s.id] = [{ url: legacyPhotos[s.id], path: `photos/${s.id}.webp`, caption: '' }];
   $('#photoGrid').innerHTML = SLOTS.map(s => `<div class="ph" data-slot="${s.id}"></div>`).join('');
   SLOTS.forEach(s => renderSlot(s.id));
+  drawHb();
 }
 
 function renderSlot(id) {
+  if (id === 'hero') setTimeout(drawHb);
   const s = SLOTS.find(x => x.id === id), card = $(`.ph[data-slot="${id}"]`), list = albums[id] || [];
   const open = card.classList.contains('open');
   card.innerHTML = `
@@ -683,3 +685,45 @@ document.addEventListener('click', async e => {
   await F.setDoc(F.doc(db, 'site', 'config'), { reelCovers: { [u]: m.url } }, { merge: true }).catch(err => alert('失敗：' + errText(err)));
   redrawReelRows();
 }, true);
+
+/* ---------- 首頁主圖與背景位置：site/config.heroArt = { x, y, zoom }（主圖）、heroBg = { url, x, y, zoom, dim }（背景，預設熊） ---------- */
+const HB0 = { url: '', x: 50, y: 100, zoom: 100, dim: 50 }, HA0 = { x: 50, y: 50, zoom: 100 };
+let heroBg = { ...HB0 }, heroArt = { ...HA0 }, hbWhich = 'art', hbT = null;
+const hbCur = () => hbWhich === 'art' ? heroArt : heroBg;
+function setVars(el, o) { el.style.setProperty('--x', o.x + '%'); el.style.setProperty('--y', o.y + '%'); el.style.setProperty('--z', o.zoom / 100); if (o.dim != null) el.style.setProperty('--o', o.dim / 100); }
+function drawHb() {
+  const im = $('#hbImg'); if (!im) return;
+  const src = heroBg.url || 'img/bear-hero.webp'; if (im.getAttribute('src') !== src) im.src = src;
+  setVars(im, heroBg);
+  const art = $('#hbArt'), a = (albums.hero || [])[0]?.url || legacyPhotos.hero || '';
+  if (a && art.getAttribute('src') !== a) art.src = a; art.hidden = !a; setVars(art, heroArt);
+  const c = hbCur(); $('#hbX').value = c.x; $('#hbY').value = c.y; $('#hbZ').value = c.zoom; $('#hbD').value = heroBg.dim;
+  $('#hbDL').hidden = hbWhich === 'art'; $('#hbPrev').classList.toggle('edit-art', hbWhich === 'art');
+  $('#hbBear').hidden = !heroBg.url;
+  if (hbWhich === 'art' && !a) $('#hbMsg').textContent = '還沒上傳「首頁主圖」，先到上面照片區上傳';
+}
+function saveHb(now) {
+  clearTimeout(hbT); $('#hbMsg').textContent = '儲存中…';
+  hbT = setTimeout(() => F.setDoc(F.doc(db, 'site', 'config'), { heroBg, heroArt }, { merge: true })
+    .then(() => { $('#hbMsg').textContent = '已儲存 ✓（網站重新整理就看得到）'; })
+    .catch(err => { $('#hbMsg').textContent = '儲存失敗：' + errText(err); }), now ? 0 : 600);
+}
+$('#hbWhich').addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (!b) return; hbWhich = b.dataset.w; document.querySelectorAll('#hbWhich button').forEach(x => x.classList.toggle('active', x === b)); $('#hbMsg').textContent = ''; drawHb(); });
+[['hbX', 'x'], ['hbY', 'y'], ['hbZ', 'zoom']].forEach(([id, k]) => $('#' + id).addEventListener('input', e => { hbCur()[k] = Number(e.target.value); drawHb(); saveHb(); }));
+$('#hbD').addEventListener('input', e => { heroBg.dim = Number(e.target.value); drawHb(); saveHb(); });
+$('#hbPick').addEventListener('click', async () => { const [m] = await openPicker({ single: true, title: '選首頁背景圖' }); if (!m) return; heroBg.url = m.url; drawHb(); saveHb(true); });
+$('#hbBear').addEventListener('click', () => { heroBg.url = ''; drawHb(); saveHb(true); });
+$('#hbReset').addEventListener('click', () => { if (hbWhich === 'art') heroArt = { ...HA0 }; else heroBg = { ...HB0, url: heroBg.url }; drawHb(); saveHb(true); });
+// 在預覽上拖曳：往右拖＝圖往右移
+(() => {
+  const pv = $('#hbPrev'); let st = null;
+  pv.addEventListener('pointerdown', e => { const c = hbCur(); st = { px: e.clientX, py: e.clientY, x: c.x, y: c.y }; pv.setPointerCapture(e.pointerId); });
+  pv.addEventListener('pointermove', e => {
+    if (!st) return; const c = hbCur(), r = (hbWhich === 'art' ? $('.hb-main') : pv).getBoundingClientRect(), k = 100 / (c.zoom / 100);
+    c.x = Math.round(Math.min(100, Math.max(0, st.x - (e.clientX - st.px) / r.width * k)));
+    c.y = Math.round(Math.min(100, Math.max(0, st.y - (e.clientY - st.py) / r.height * k)));
+    drawHb();
+  });
+  const end = () => { if (st) { st = null; saveHb(); } };
+  pv.addEventListener('pointerup', end); pv.addEventListener('pointercancel', end);
+})();

@@ -35,6 +35,8 @@ if (db) {
       if (d.photos) S.photos = d.photos;
       if (Array.isArray(d.reels)) S.reels = d.reels;
       if (d.reelCovers) S.reelCovers = d.reelCovers;
+      if (d.heroBg) S.heroBg = d.heroBg;
+      if (d.heroArt) S.heroArt = d.heroArt;
       if (d.albums) S.albums = d.albums;
       if (d.albumTitles) S.albumTitles = d.albumTitles;
       if (d.albumReels) S.albumReels = d.albumReels;
@@ -93,8 +95,17 @@ $$('.photo-slot[data-photo]').forEach(el => {
     // 首頁主圖：上傳的照片放右邊（原本熊的位置），熊改當整個背景（壓暗）
     const img = new Image();
     img.onload = () => {
-      el.dataset.cover = '1'; el.style.setProperty('--photo', "url('img/bear-hero.webp')"); el.classList.add('has-photo', 'bear-bg');
+      el.dataset.cover = '1'; el.style.setProperty('--photo', 'none'); el.classList.add('has-photo', 'bear-bg');
+      // 背景（預設是熊）：後台「首頁背景」可換圖、調左右/上下/放大/亮度 → site/config.heroBg
+      const hb = S.heroBg || {}, bg = document.createElement('img');
+      bg.className = 'hero-bear'; bg.alt = ''; bg.src = hb.url || 'img/bear-hero.webp';
+      bg.style.setProperty('--x', (hb.x ?? 50) + '%'); bg.style.setProperty('--y', (hb.y ?? 100) + '%');
+      bg.style.setProperty('--z', (hb.zoom ?? 100) / 100); bg.style.setProperty('--o', (hb.dim ?? 50) / 100);
+      el.appendChild(bg);
       const art = document.querySelector('.hero-art img'); art.src = cover; art.closest('.hero-art').classList.add('is-photo');
+      const ha = S.heroArt || {}; // 後台調整的主圖位置
+      art.style.objectPosition = `${ha.x ?? 50}% ${ha.y ?? 50}%`; art.style.transformOrigin = art.style.objectPosition;
+      if ((ha.zoom ?? 100) > 100) art.style.transform = `scale(${ha.zoom / 100})`;
     };
     img.src = cover;
   } else if (cover) {
