@@ -167,6 +167,7 @@ async function loadContent() {
       closedDates: d.closedDates || [],
       reels: d.reels || base.reels || []
     };
+    reelCovers = d.reelCovers || {};
   } catch (err) {
     console.warn(err);
     cfg = { contact: base.contact, classes: base.classes, booking: base.booking, closedDates: [], reels: base.reels || [] };
@@ -271,6 +272,7 @@ const SLOTS = [
   { id: 'g3', name: '訓練照片 3', where: '私人課區', max: 1600 },
   { id: 'hero', name: '首頁背景', where: '首頁最上方（會壓暗，只用一張）', max: 1920, single: true }
 ];
+let reelCovers = {};
 let photosLoaded = false, albums = {}, albumTitles = {}, albumDesc = {}, albumReels = {}, legacyPhotos = {};
 
 async function loadPhotos() {
@@ -278,7 +280,7 @@ async function loadPhotos() {
   try {
     const snap = await F.getDoc(F.doc(db, 'site', 'config'));
     const d = snap.exists() ? snap.data() : {};
-    albums = d.albums || {}; albumTitles = d.albumTitles || {}; albumDesc = d.albumDesc || {}; albumReels = d.albumReels || {}; legacyPhotos = d.photos || {};
+    albums = d.albums || {}; albumTitles = d.albumTitles || {}; albumDesc = d.albumDesc || {}; albumReels = d.albumReels || {}; legacyPhotos = d.photos || {}; reelCovers = d.reelCovers || reelCovers;
   } catch {}
   // 舊版單張照片轉成相簿第一張
   for (const s of SLOTS) if (!albums[s.id]?.length && legacyPhotos[s.id]) albums[s.id] = [{ url: legacyPhotos[s.id], path: `photos/${s.id}.webp`, caption: '' }];
@@ -300,7 +302,7 @@ function renderSlot(id) {
     ${open && !s.single ? `<div class="alb-extra">
       <label class="field">相簿說明（顯示在相簿頁最上面）<textarea class="inp" data-desc rows="3" maxlength="600" placeholder="例：2026 全國拳擊錦標賽，帶學員出賽的紀錄。">${esc(albumDesc[id] || '')}</textarea></label>
       <div class="field">IG Reels 影片<div style="display:flex;gap:.5rem;margin-top:.3rem"><input class="inp" data-reelurl placeholder="貼上 Reels 連結"><button type="button" class="btn btn-ghost btn-sm" data-addreel>加入</button></div></div>
-      ${(albumReels[id] || []).map((u, i) => `<div class="reel-row"><a href="${esc(u)}" target="_blank" rel="noopener">▶ ${esc(u.replace('https://www.instagram.com', ''))}</a><button type="button" data-rmreel="${i}" title="刪除">✕</button></div>`).join('')}
+      ${(albumReels[id] || []).map((u, i) => `<div class="reel-row"><button type="button" class="cov${reelCovers[u] ? ' has' : ''}" data-cover="${esc(u)}" title="選封面（從媒體庫）" style="${reelCovers[u] ? `background-image:url('${reelCovers[u]}')` : ''}">${reelCovers[u] ? '' : '封面'}</button><a href="${esc(u)}" target="_blank" rel="noopener">▶ ${esc(u.replace('https://www.instagram.com', ''))}</a><button type="button" data-rmreel="${i}" title="刪除">✕</button></div>`).join('')}
       <a class="btn btn-ghost btn-sm" href="/album?id=${id}" target="_blank" style="justify-self:start">預覽相簿頁 →</a>
     </div>` : ''}
     ${open && !s.single ? `<div class="alb-list">${list.map((g, i) => `<div class="gal-item">
@@ -412,7 +414,7 @@ function normReel(u) {
 }
 function renderReels() {
   $('#reelRows').innerHTML = cfg.reels.map((u, i) => `<div class="reel-row">
-    <a href="${esc(u)}" target="_blank" rel="noopener">${i + 1}. ${esc(u.replace('https://www.instagram.com', ''))}</a>
+    <button type="button" class="cov${reelCovers[u] ? ' has' : ''}" data-cover="${esc(u)}" title="選封面（從媒體庫）" style="${reelCovers[u] ? `background-image:url('${reelCovers[u]}')` : ''}">${reelCovers[u] ? '' : '封面'}</button><a href="${esc(u)}" target="_blank" rel="noopener">${i + 1}. ${esc(u.replace('https://www.instagram.com', ''))}</a>
     <button type="button" data-up="${i}" title="往前" ${i === 0 ? 'disabled' : ''}>↑</button>
     <button type="button" data-down="${i}" title="往後" ${i === cfg.reels.length - 1 ? 'disabled' : ''}>↓</button>
     <button type="button" data-rmreel="${i}" title="刪除">✕</button></div>`).join('') || '<p class="hint">還沒有影片</p>';
@@ -662,3 +664,22 @@ function openPicker({ single = false, title = '從媒體庫選' } = {}) {
     });
   });
 }
+
+/* ---------- IG 影片封面：site/config.reelCovers[網址] = 圖片網址（從媒體庫選）；有封面的影片卡網站上只顯示封面＋播放鍵，大小一致 ---------- */
+function redrawReelRows() { if (cfg) renderReels(); for (const s of SLOTS) if ($(`.ph[data-slot="${s.id}"].open`)) renderSlot(s.id); }
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-cover]'); if (!b) return;
+  e.stopPropagation();
+  const u = b.dataset.cover;
+  if (reelCovers[u] && !confirm('換一張封面？（按「取消」可以選擇移除封面）')) {
+    if (!confirm('移除這支影片的封面？')) return;
+    delete reelCovers[u];
+    await F.setDoc(F.doc(db, 'site', 'config'), { reelCovers: { [u]: F.deleteField() } }, { merge: true }).catch(err => alert('失敗：' + errText(err)));
+    return redrawReelRows();
+  }
+  const [m] = await openPicker({ single: true, title: '選影片封面（直的照片最好看）' });
+  if (!m) return;
+  reelCovers[u] = m.url;
+  await F.setDoc(F.doc(db, 'site', 'config'), { reelCovers: { [u]: m.url } }, { merge: true }).catch(err => alert('失敗：' + errText(err)));
+  redrawReelRows();
+}, true);

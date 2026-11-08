@@ -28,14 +28,12 @@ if (!NAMES[id] || (!photos.length && !reels.length)) {
     <h1 class="al-title">${esc(title)}</h1>
     <div class="al-tags"><span>突破重圍</span>${photos.length ? `<span>照片 ${photos.length}</span>` : ''}${reels.length ? `<span>影片 ${reels.length}</span>` : ''}</div>
     ${desc ? `<p class="al-desc">${esc(desc)}</p>` : ''}
-    ${reels.length ? `<h2 class="al-h">影片</h2><div class="reels" id="reelList">${reels.map(u => `<div class="reel"><blockquote class="instagram-media" data-instgrm-permalink="${u}?utm_source=ig_embed" data-instgrm-version="14"><a href="${u}" target="_blank" rel="noopener" class="reel-ph">在 Instagram 觀看</a></blockquote></div>`).join('')}</div>` : ''}
+    ${reels.length ? `<h2 class="al-h">影片</h2><div class="reels" id="reelList"></div>` : ''}
     ${photos.length ? `<h2 class="al-h">照片</h2><div class="al-grid">${photos.map((p, i) => `<figure data-i="${i}"><img src="${p.url}" alt="${esc(p.caption || title)}" loading="lazy">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`).join('')}</div>` : ''}
     ${others.length ? `<h2 class="al-h">其他相簿</h2><div class="al-next">${others.map(k => `<a href="/album?id=${k}" style="background-image:url('${(d.albums?.[k] || [])[0]?.url || ''}')"><span>${esc(d.albumTitles?.[k] || NAMES[k])}</span></a>`).join('')}</div>` : ''}`;
-  if (reels.length) {
-    const sc = document.createElement('script'); sc.async = true; sc.src = 'https://www.instagram.com/embed.js';
-    sc.onload = () => window.instgrm?.Embeds.process(); document.body.appendChild(sc);
-  }
 }
+
+if (reels.length && document.getElementById('reelList')) window.renderReels(document.getElementById('reelList'), reels, d.reelCovers);
 
 /* 燈箱 */
 const lb = $('#lightbox'); let cur = 0;

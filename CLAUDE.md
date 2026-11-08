@@ -27,3 +27,5 @@
 - LINE 記住客人：學員 App 第一次留姓名＋手機 → `rememberLineUser`（電話對到舊學員就綁定，否則建 `prospect: true`、0 堂的新客人）；網站/LIFF 預約有 lineUserId 也會自動記住。0 堂的人在 App 按「申請預約」→ api `request` 建 pending booking（走預約單確認流程），我的課顯示待確認
 
 - Storage 規則要讀 Firestore admins：Storage 服務帳號需要 roles/firebaserules.firestoreServiceAgent（2026-11-08 已加，少了會全部上傳失敗）
+
+- IG 影片＝`public/reels.js` 共用輪播（首頁＋相簿頁）：電腦 3 張／平板 2／手機 1，scroll-snap＋箭頭＋圓點。封面 `site/config.reelCovers[網址]`（後台每支「封面」從媒體庫選），沒封面就用 IG `/embed/` iframe 裁掉上方 54px 帳號列與下方按讚區

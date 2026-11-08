@@ -34,6 +34,7 @@ if (db) {
       if (Array.isArray(d.closedDates)) S.closedDates = d.closedDates;
       if (d.photos) S.photos = d.photos;
       if (Array.isArray(d.reels)) S.reels = d.reels;
+      if (d.reelCovers) S.reelCovers = d.reelCovers;
       if (d.albums) S.albums = d.albums;
       if (d.albumTitles) S.albumTitles = d.albumTitles;
       if (d.albumReels) S.albumReels = d.albumReels;
@@ -125,20 +126,7 @@ const reels = (S.reels || []).filter(u => /^https:\/\/www\.instagram\.com\/(reel
 if (reels.length) {
   $('#reels').hidden = false;
   $$('[data-reels-link]').forEach(a => a.hidden = false);
-  $('#reelList').innerHTML = reels.map(u => `<div class="reel">
-    <blockquote class="instagram-media" data-instgrm-permalink="${u}?utm_source=ig_embed" data-instgrm-version="14">
-      <a href="${u}" target="_blank" rel="noopener" class="reel-ph">在 Instagram 觀看</a>
-    </blockquote></div>`).join('');
-  // 滑到附近才載入 IG 的嵌入程式，不拖慢首頁
-  const rio = new IntersectionObserver(es => {
-    if (!es.some(e => e.isIntersecting)) return;
-    rio.disconnect();
-    const sc = document.createElement('script');
-    sc.async = true; sc.src = 'https://www.instagram.com/embed.js';
-    sc.onload = () => window.instgrm?.Embeds.process();
-    document.body.appendChild(sc);
-  }, { rootMargin: '600px' });
-  rio.observe($('#reels'));
+  window.renderReels($('#reelList'), reels, S.reelCovers);
 }
 
 /* ---------- reveal on scroll ---------- */

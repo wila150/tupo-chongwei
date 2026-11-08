@@ -215,11 +215,26 @@ details p { color: var(--muted); margin-top: .6rem; }
 
 /* IG Reels 作品集 */
 .reels-section { border-top: 1px solid #222; }
-.reels { display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2rem 0 1rem; }
-.reels .reel { flex: none; width: 340px; max-width: 86vw; scroll-snap-align: start; }
-.reels .instagram-media { min-width: 0 !important; width: 100% !important; margin: 0 !important; border-radius: 14px !important; }
-.reel-ph { display: grid; place-items: center; aspect-ratio: 9/16; background: var(--ink-2); border: 1px solid #2a2a2a; border-radius: 14px; color: var(--muted); }
-@media (min-width: 1100px) { .reels { justify-content: center; flex-wrap: wrap; overflow: visible; } }
+.reels { padding: 2rem 0 .5rem; }
+.rc { position: relative; }
+.rc-track { display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+.rc-track::-webkit-scrollbar { display: none; }
+.rc .reel { flex: 0 0 calc((100% - 2rem) / 3); scroll-snap-align: start; min-width: 0; }
+@media (max-width: 900px) { .rc .reel { flex-basis: calc((100% - 1rem) / 2); } }
+@media (max-width: 600px) { .rc-track { gap: .8rem; } .rc .reel { flex-basis: 82%; } }
+.rc-nav { position: absolute; top: calc(50% - 1.4rem); transform: translateY(-50%); z-index: 2; width: 46px; height: 46px; border-radius: 50%; border: 1px solid #333; background: rgba(14,14,14,.85); color: #fff; font-size: 1.7rem; line-height: 1; cursor: pointer; display: grid; place-items: center; transition: opacity .2s, background .2s; }
+.rc-nav:hover { background: var(--red); border-color: var(--red); }
+.rc-nav:disabled { opacity: 0; pointer-events: none; }
+.rc-prev { left: -23px; } .rc-next { right: -23px; }
+@media (max-width: 760px) { .rc-nav { display: none; } }
+.rc-dots { display: flex; justify-content: center; gap: .45rem; margin-top: 1.1rem; }
+.rc-dots button { width: 8px; height: 8px; border-radius: 999px; border: 0; padding: 0; background: #444; cursor: pointer; transition: width .25s, background .25s; }
+.rc-dots button.on { width: 24px; background: var(--red); }
+.rc-single .rc-dots, .rc-single .rc-nav { display: none; }
+.reel-cover { display: block; background: #000 center/cover; }
+.reel-play { position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; border-radius: 50%; background: rgba(0,0,0,.55); border: 2px solid rgba(255,255,255,.85); transition: transform .2s, background .2s; }
+.reel-play::after { content: ''; position: absolute; left: 25px; top: 19px; border-left: 20px solid #fff; border-top: 13px solid transparent; border-bottom: 13px solid transparent; }
+.reel-cover:hover .reel-play { transform: scale(1.08); background: var(--red); border-color: var(--red); }
 
 /* 側邊浮動 LINE／IG（跟著捲動） */
 .side-social { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: 40; display: flex; flex-direction: column; gap: .6rem; }
@@ -269,5 +284,12 @@ details p { color: var(--muted); margin-top: .6rem; }
 .photo-slot.no-cover > span { display: none; }
 .photo-slot.clickable::after { content: '→'; position: absolute; top: .8rem; right: .8rem; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,.55); display: grid; place-items: center; font-weight: 900; opacity: 0; transition: opacity .2s; z-index: 1; }
 .photo-slot.clickable:hover::after { opacity: 1; }
-.reel { overflow: hidden; border-radius: 14px; }
-.reel iframe { max-width: 100% !important; min-width: 0 !important; }
+/* IG 影片卡：IG 嵌入框上方帳號列固定 54px、影片區 4:5 → 用外框裁掉白色的頭尾 */
+.reel { border-radius: 16px; overflow: hidden; background: var(--ink-2); border: 1px solid #2a2a2a; transition: transform .25s, border-color .25s; }
+.reel:hover { border-color: #444; }
+.reel-frame { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: #000; }
+.reel-frame iframe { position: absolute; left: 0; top: -54px; width: 100%; height: calc(100% + 54px + 220px); border: 0; }
+.reel-link { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1rem; font-weight: 700; font-size: .92rem; color: var(--paper); text-decoration: none; }
+.reel-link span { color: var(--muted); }
+.reel-link:hover { color: var(--red); }
+.reel-frame:not(.reel-cover)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: #000; pointer-events: none; }
