@@ -9,6 +9,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import crypto from 'node:crypto';
 
 setGlobalOptions({ region: 'asia-east1', maxInstances: 5 });
@@ -258,6 +259,11 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
   for (const ev of req.body.events || []) {
     try {
       if (ev.type === 'postback') { await onPostback(ev); continue; }
+      // 收件匣：所有傳給官方帳號的訊息、加好友／封鎖都記到後台「訊息」
+      const isCode = ev.type === 'message' && ev.message.type === 'text' && /^(通知綁定\s*)?\S+$/.test(ev.message.text.trim()) && ev.message.text.includes(process.env.NOTIFY_CODE || '\u0000');
+      if (ev.type === 'message') await logChat(ev.source.userId, 'in', ev.message.type, isCode ? '（傳了通知綁定密碼）' : msgPreview(ev.message)).catch(e => logger.warn('logChat', e.message));
+      else if (ev.type === 'follow') await logChat(ev.source.userId, 'in', 'system', '👋 加入好友').catch(() => {});
+      else if (ev.type === 'unfollow') await logChat(ev.source.userId, 'in', 'system', '🚫 封鎖了官方帳號').catch(() => {});
       if (ev.type !== 'message' || ev.message.type !== 'text') continue;
       const t = ev.message.text.trim(), uid = ev.source.userId;
       // 「通知綁定 密碼」或只傳密碼本身都可以
@@ -275,6 +281,46 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
       }
     } catch (e) { logger.error('webhook', e); }
   }
+});
+
+/* ---------- LINE 訊息收件匣：chats/{LINE uid}（名字、頭像、最後一則、未讀）＋ chats/{uid}/msgs ---------- */
+async function lineProfile(uid) {
+  try {
+    const r = await fetch(`https://api.line.me/v2/bot/profile/${uid}`, { headers: { Authorization: `Bearer ${await lineToken()}` } });
+    if (r.ok) { const j = await r.json(); return { name: j.displayName || '', pic: j.pictureUrl || '' }; }
+  } catch {}
+  return { name: '', pic: '' };
+}
+async function logChat(uid, dir, type, body) {
+  if (!uid) return;
+  const ref = db.doc(`chats/${uid}`), snap = await ref.get();
+  const prof = !snap.exists || !snap.data().name || Date.now() - (snap.data().profAt || 0) > 7 * 864e5 ? { ...(await lineProfile(uid)), profAt: Date.now() } : {};
+  const st = !snap.exists || snap.data().studentId === undefined ? await studentByLine(uid).catch(() => null) : null;
+  await ref.set({
+    ...prof, ...(st !== null || !snap.exists ? { studentId: st?.id || '', studentName: st?.name || '' } : {}),
+    last: body.slice(0, 80), lastDir: dir, lastAt: FieldValue.serverTimestamp(),
+    ...(dir === 'in' ? { unread: FieldValue.increment(1) } : {})
+  }, { merge: true });
+  await ref.collection('msgs').add({ dir, type, text: body.slice(0, 2000), at: FieldValue.serverTimestamp() });
+}
+const msgPreview = m => m.type === 'text' ? m.text : m.type === 'sticker' ? '[貼圖]' : m.type === 'image' ? '[圖片]（到 LINE 官方帳號 App 看）' : m.type === 'video' ? '[影片]' : m.type === 'audio' ? '[語音]' : m.type === 'location' ? `[位置] ${m.address || m.title || ''}` : m.type === 'file' ? `[檔案] ${m.fileName || ''}` : `[${m.type}]`;
+
+/* 後台回覆 LINE 訊息：Firebase 登入的管理員才能用 */
+export const adminChat = onRequest({ invoker: 'public', cors: [SITE, 'https://tupo-chongwei.firebaseapp.com', /localhost/] }, async (req, res) => {
+  try {
+    if (req.method !== 'POST') throw httpErr(405, 'POST only');
+    const tok = String(req.headers.authorization || '').replace(/^Bearer\s+/, '');
+    const u = await getAuth().verifyIdToken(tok).catch(() => null);
+    if (!u) throw httpErr(401, '請重新登入後台');
+    const ok = (await db.doc(`admins/${u.uid}`).get()).exists || (u.email_verified && u.email && (await db.doc(`admins/${u.email}`).get()).exists);
+    if (!ok) throw httpErr(403, '沒有管理員權限');
+    const to = String(req.body?.to || ''), t = String(req.body?.text || '').trim();
+    if (!/^U[0-9a-f]{32}$/.test(to) || !t) throw httpErr(400, '缺少對象或內容');
+    const r = await fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await lineToken()}` }, body: JSON.stringify({ to, messages: [text(t.slice(0, 4900))] }) });
+    if (!r.ok) { const e = await r.text(); logger.warn('adminChat', r.status, e); throw httpErr(502, r.status === 429 ? '本月免費訊息額度用完了，請改用 LINE 官方帳號 App 回覆' : 'LINE 傳送失敗'); }
+    await logChat(to, 'out', 'text', t);
+    res.json({ ok: true });
+  } catch (e) { res.status(e.code >= 400 && e.code < 600 ? e.code : 500).json({ error: e.code ? e.message : '系統忙碌' }); }
 });
 
 /* ---------- 預約單卡片 ---------- */

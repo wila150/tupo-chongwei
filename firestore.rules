@@ -53,7 +53,8 @@ service cloud.firestore {
     match /packages/{id} { allow read: if true; allow write: if isAdmin(); } // 學員 App 顯示方案價格
     match /notify/{id} { allow read, write: if isAdmin(); } // LINE 通知名單（Functions 寫入）
     match /sales/{id} { allow read, write: if isAdmin(); }
-    match /media/{id} { allow read, write: if isAdmin(); } // 媒體庫（後台用；網站顯示的網址存在 site/config）
+    match /media/{id} { allow read, write: if isAdmin(); }
+    match /chats/{uid} { allow read, write: if isAdmin(); match /msgs/{mid} { allow read, write: if isAdmin(); } } // LINE 訊息收件匣（Functions 寫入） // 媒體庫（後台用；網站顯示的網址存在 site/config）
 
     match /admins/{uid} {
       allow read: if request.auth != null && (request.auth.uid == uid || request.auth.token.email == uid);

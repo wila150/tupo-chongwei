@@ -33,7 +33,7 @@ export function initCrm({ F, db, esc, $ }) {
   };
   let pendingBk = [];
   const SEEN_KEY = 'tupo_bell_seen'; // 🔔 鈴鐺：上次打開的時間、已知的預約（判斷新進來的）
-  let seen = Number(localStorage.getItem(SEEN_KEY) || 0), known = null, knownL = null;
+  let seen = Number(localStorage.getItem(SEEN_KEY) || 0), known = null, knownL = null, knownC = null, chatItems = [];
   const IC = {
     cal: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>',
     bell: '<svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
@@ -435,6 +435,11 @@ export function initCrm({ F, db, esc, $ }) {
     renderHome();
   }
   loadRevenue();
+  function newArrivals2(list) { // 新的 LINE 訊息
+    if (!knownC) { knownC = new Set(list.map(x => x.id)); return; }
+    const fresh = list.filter(x => !knownC.has(x.id)); fresh.forEach(x => knownC.add(x.id));
+    if (fresh.length) alertNew(fresh.map(x => ({ ...x, t: x.t.replace('💬 ', '💬 新訊息：') })));
+  }
   function lineArrivals(list) { // 跟 newArrivals 一樣，但另外記（課表和預約是兩個來源）
     if (!knownL) { knownL = new Set(list.map(x => x.id)); return; }
     const fresh = list.filter(x => !knownL.has(x.id)); fresh.forEach(x => knownL.add(x.id));
@@ -446,6 +451,7 @@ export function initCrm({ F, db, esc, $ }) {
     const now = Date.now(), today = ymd(new Date()), since = now - 3 * 864e5;
     const nm = l => l.studentIds.map((id, i) => byId(id)?.name || l.studentNames?.[i] || '').filter(Boolean).join('、');
     return [
+      ...chatItems.map(c => ({ ic: '💬', t: `新訊息：${c.t.replace('💬 ', '')}`, s: c.s, go: 'messages', at: c.at, urgent: true })),
       ...pendingBk.map(b => ({ ic: '🥊', t: `新預約待確認：${b.name}`, s: `${md(b.date)} ${b.time}・${b.source === 'line-app' ? 'LINE 申請' : '網站'}`, go: 'bookings', at: msOf(b.createdAt), urgent: true })),
       ...lessons.filter(l => l.source === 'line' && l.status === 'scheduled' && msOf(l.createdAt) > since).map(l => ({ ic: '📅', t: `LINE 預約（已扣堂）：${nm(l)}`, s: `${md(l.date)} ${l.time}`, go: 'lessons', at: msOf(l.createdAt) })),
       ...lessons.filter(l => l.status === 'cancelled' && l.cancelledBy === 'student' && l.date >= today).map(l => ({ ic: '↩️', t: `學員取消：${nm(l)}`, s: `${md(l.date)} ${l.time}・已退回 1 堂`, go: 'lessons', at: 0 })),
@@ -522,6 +528,7 @@ export function initCrm({ F, db, esc, $ }) {
 
   return {
     renderReport, renderHome,
+    setChats(list) { newArrivals2(list); chatItems = list; renderHome(); },
     setPending(list) { newArrivals(list.map(b => ({ id: 'b' + b.id, t: `🥊 新預約：${b.name}`, s: `${md(b.date)} ${b.time}`, go: 'bookings' }))); pendingBk = list; renderHome(); },
     flag(phone) {
       const p = normPhone(phone); const st = p && students.find(x => normPhone(x.phone) === p);

@@ -47,3 +47,4 @@
 - 網站「立即預約（LINE）」→ https://liff.line.me/<liffId>（在 LINE 開同一份表單 /?book，預約單傳到客人 LINE）；沒 liffId 才退回 oaMessage
 - 網站預約完成＝「預約成功！」＋預約單，不強制跳 LINE（教練靠 onBookingCreated 收 LINE 通知）；「也想用 LINE 跟教練說一聲（選填）」開 oaMessage 預填完整預約單；「立即預約」只捲到表單
 - 後台🔔鈴鐺（admin-crm.js renderBell/newArrivals/lineArrivals/alertNew）：待確認預約、3 天內 LINE App 預約、學員取消、漏扣；新預約跳提示＋叮聲＋（允許時）桌面通知；分頁標題顯示未處理數；已讀時間存 localStorage tupo_bell_seen
+- LINE 訊息收件匣：lineWebhook 把所有訊息／加好友／封鎖存到 `chats/{LINE uid}`（name、pic、studentId/studentName、last、lastDir、lastAt、unread）＋`chats/{uid}/msgs`（dir in/out/system）；後台「訊息」頁（admin.js startInbox/openThread）即時看、回覆走新 function `adminChat`（Firebase ID token＋admins 驗證 → LINE push，會吃每月免費額度）。11/8 以前的訊息沒存，查不到。手機底部列隱藏「報表」換成「訊息」

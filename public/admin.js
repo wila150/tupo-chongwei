@@ -127,7 +127,7 @@ $('#list').addEventListener('click', async e => {
 });
 
 /* ================= 網站內容編輯 ================= */
-const TITLES = { home: '總覽', bookings: '網站預約', lessons: '課務扣堂', students: '學員', report: '報表', content: '網站內容', media: '媒體庫' };
+const TITLES = { home: '總覽', bookings: '網站預約', lessons: '課務扣堂', students: '學員', report: '報表', content: '網站內容', media: '媒體庫', messages: 'LINE 訊息' };
 function showView(v) {
   document.querySelectorAll('#views button').forEach(x => x.classList.toggle('active', x.dataset.v === v));
   for (const k of Object.keys(TITLES)) { const el = document.getElementById(`${k}View`); if (el) el.hidden = k !== v; }
@@ -136,6 +136,7 @@ function showView(v) {
   if (v === 'content' && !cfg) loadContent();
   if (v === 'content' && !photosLoaded) loadPhotos();
   if (v === 'media') loadMedia();
+  if (v !== 'messages') window.__closeThread?.();
   if (v === 'report') crm?.renderReport();
   if (v === 'home') crm?.renderHome?.();
   scrollTo(0, 0);
@@ -773,3 +774,58 @@ $('#hbReset').addEventListener('click', () => { if (hbWhich === 'art') heroArt =
     });
   });
 })();
+
+/* ================= LINE 訊息收件匣：chats/{LINE uid}＋msgs（Functions 寫入），回覆走 adminChat ================= */
+const CHAT_API = 'https://asia-east1-tupo-chongwei.cloudfunctions.net/adminChat';
+let chats = [], chatUnsub = null, curChat = null, msgUnsub = null;
+const ago = ms => { if (!ms) return ''; const d = (Date.now() - ms) / 6e4; if (d < 1) return '剛剛'; if (d < 60) return `${Math.floor(d)} 分`; if (d < 1440) return `${Math.floor(d / 60)} 小時`; const t = new Date(ms); return `${t.getMonth() + 1}/${t.getDate()}`; };
+const tms = x => x?.toMillis?.() || x?._ms || 0;
+const av = c => c.pic ? `<span class="ib-av" style="background-image:url('${esc(c.pic)}')"></span>` : `<span class="ib-av">${esc((c.name || '?').slice(0, 1))}</span>`;
+function startInbox() {
+  if (chatUnsub) return;
+  chatUnsub = F.onSnapshot(F.collection(db, 'chats'), snap => {
+    chats = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => tms(b.lastAt) - tms(a.lastAt));
+    renderChatList();
+    const unread = chats.filter(c => c.unread > 0 && c.lastDir === 'in');
+    const nb = document.querySelector('[data-badge=messages]'); if (nb) { nb.hidden = !unread.length; nb.textContent = unread.length; }
+    crm?.setChats?.(unread.map(c => ({ id: 'c' + c.id + tms(c.lastAt), t: `💬 ${c.studentName || c.name || 'LINE 好友'}`, s: c.last || '', go: 'messages', at: tms(c.lastAt) })));
+  }, err => { $('#ibList').innerHTML = `<p class="hint" style="padding:1rem">讀取失敗：${esc(err.message)}</p>`; });
+}
+function renderChatList() {
+  $('#ibList').innerHTML = chats.map(c => `<div class="ib-row ${curChat === c.id ? 'on' : ''}" data-chat="${c.id}">${av(c)}<div>
+    <b><span>${esc(c.studentName ? `${c.studentName}（${c.name}）` : c.name || 'LINE 好友')}</span><small>${ago(tms(c.lastAt))}</small></b>
+    <p>${c.lastDir === 'out' ? '你：' : ''}${esc(c.last || '')}</p></div>${c.unread > 0 && c.lastDir === 'in' ? `<span class="ib-u">${c.unread}</span>` : ''}</div>`).join('')
+    || '<p class="hint" style="padding:1rem">還沒有訊息。有人傳訊息給官方帳號就會出現在這裡。</p>';
+}
+function openThread(id) {
+  curChat = id; msgUnsub?.(); const c = chats.find(x => x.id === id) || { id };
+  $('#inbox').classList.add('open'); renderChatList();
+  $('#ibThread').innerHTML = `<div class="ib-head"><button class="icon-btn ib-back" data-ibback>‹</button>${av(c)}<div><b>${esc(c.studentName ? `${c.studentName}（${c.name}）` : c.name || 'LINE 好友')}</b><small>User ID：${esc(id)}</small></div></div>
+    <div class="ib-msgs" id="ibMsgs"></div>
+    <form class="ib-send" id="ibSend"><textarea id="ibText" rows="1" placeholder="輸入訊息…（Enter 送出，Shift+Enter 換行）" maxlength="2000"></textarea><button class="btn btn-sm">傳送</button></form>`;
+  if (c.unread) F.setDoc(F.doc(db, 'chats', id), { unread: 0 }, { merge: true }).catch(() => {});
+  msgUnsub = F.onSnapshot(F.collection(db, 'chats', id, 'msgs'), snap => {
+    const ms = snap.docs.map(d => d.data()).sort((a, b) => tms(a.at) - tms(b.at)).slice(-200);
+    const box = $('#ibMsgs'); if (!box) return;
+    box.innerHTML = ms.map(m => `<div class="ib-m ${m.dir === 'out' ? 'out' : m.type === 'system' ? 'system' : 'in'}">${esc(m.text)}<time>${tms(m.at) ? new Date(tms(m.at)).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</time></div>`).join('') || '<div class="ib-empty">沒有訊息</div>';
+    box.scrollTop = box.scrollHeight;
+    if (curChat === id && chats.find(x => x.id === id)?.unread) F.setDoc(F.doc(db, 'chats', id), { unread: 0 }, { merge: true }).catch(() => {});
+  });
+}
+function closeThread() { msgUnsub?.(); msgUnsub = null; curChat = null; $('#inbox')?.classList.remove('open'); }
+$('#ibList').addEventListener('click', e => { const r = e.target.closest('[data-chat]'); if (r) openThread(r.dataset.chat); });
+$('#ibThread').addEventListener('click', e => { if (e.target.closest('[data-ibback]')) { closeThread(); renderChatList(); } });
+$('#ibThread').addEventListener('keydown', e => { if (e.target.id === 'ibText' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#ibSend').requestSubmit(); } });
+$('#ibThread').addEventListener('submit', async e => {
+  e.preventDefault(); const ta = $('#ibText'), t = ta.value.trim(); if (!t || !curChat) return;
+  const btn = e.target.querySelector('button'); btn.disabled = true;
+  try {
+    const r = await fetch(CHAT_API, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await auth.currentUser.getIdToken()}` }, body: JSON.stringify({ to: curChat, text: t }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || '傳送失敗');
+    ta.value = '';
+  } catch (err) { alert(err.message); }
+  btn.disabled = false; ta.focus();
+});
+A.onAuthStateChanged(auth, u => { if (u) startInbox(); else { chatUnsub?.(); chatUnsub = null; } });
+window.__closeThread = closeThread;
