@@ -314,3 +314,18 @@ a.reel-frame:hover .reel-clip { filter: brightness(1.12); }
 .hero-bg.bear-bg { background-position: 70% 20%; opacity: .5; }
 .hero-art.is-photo img { object-position: center; }
 @media (max-width: 760px) { .hero-bg.bear-bg { opacity: .18; } }
+/* 熊在最底層：照片完全蓋在熊上面（手機也不透明），熊只在照片以外的地方隱約看到 */
+.hero-art.is-photo { z-index: 0; }
+.hero-bg.bear-bg { z-index: -1; background-position: center bottom; }
+.hero { isolation: isolate; }
+@media (max-width: 760px) {
+  .hero-art.is-photo { opacity: .7; }
+  .hero-bg.bear-bg { opacity: .22; background-size: 120% auto; background-repeat: no-repeat; background-color: var(--ink); }
+}
+/* 熊不要透過照片（紅外套）：照片不透明、左邊淡出只留一小段 */
+.hero-art.is-photo img { -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%), linear-gradient(0deg, transparent 0%, #000 18%); mask-image: linear-gradient(90deg, transparent 0%, #000 14%), linear-gradient(0deg, transparent 0%, #000 18%); }
+@media (max-width: 760px) {
+  .hero-art.is-photo { opacity: 1; }
+  .hero-art.is-photo img { -webkit-mask-image: linear-gradient(0deg, transparent 0%, #000 45%); mask-image: linear-gradient(0deg, transparent 0%, #000 45%); }
+  .hero-art.is-photo ~ .hero-inner h1, .hero-art.is-photo ~ .hero-inner p { text-shadow: 0 2px 12px rgba(0,0,0,.85); }
+}
