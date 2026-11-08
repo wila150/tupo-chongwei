@@ -43,3 +43,4 @@
 - 時段佔用＝`busy/{date}_{HHMM}` { date, time, minutes }：網站／學員 App／api 都用「時間重疊」判斷（不是只比開始時間）；舊資料沒 minutes 當 60。後台載入課表時 syncBusy() 會把未來所有 scheduled 課補寫 busy
 - 「教練行程」：排課不選學員＝lessons { kind: 'block', studentIds: [] }，只擋時段、不扣堂、不算漏扣，卡片只有「刪除行程」
 - 網站預約送出後顯示預約單（#receipt），樣式/欄位跟 LINE bookingCard 一樣，附預約編號
+- 網站「立即預約（LINE）」→ https://liff.line.me/<liffId>（在 LINE 開同一份表單 /?book，預約單傳到客人 LINE）；沒 liffId 才退回 oaMessage

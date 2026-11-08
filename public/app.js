@@ -211,7 +211,9 @@ if (S.contact.liffId && (/[?&]book\b/.test(location.search) || /liff\.state|liff
 
 /* ---------- booking ---------- */
 const quick = $('#quickLine');
-if (S.contact.lineOA) quick.href = `https://line.me/R/oaMessage/${S.contact.lineOA}/?${encodeURIComponent('教練你好，我想預約私人課 🥊\n想上課的時間：\n想練的項目：')}`;
+// 在 LINE 裡打開同一份預約表單（LIFF → /?book），送出後預約單直接傳到客人的 LINE
+if (S.contact.liffId) quick.href = `https://liff.line.me/${S.contact.liffId}`;
+else if (S.contact.lineOA) quick.href = `https://line.me/R/oaMessage/${S.contact.lineOA}/?${encodeURIComponent('教練你好，我想預約私人課 🥊\n想上課的時間：\n想練的項目：')}`;
 else quick.closest('p').remove();
 const B = S.booking;
 const form = $('#bookingForm');
