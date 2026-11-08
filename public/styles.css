@@ -335,3 +335,14 @@ a.reel-frame:hover .reel-clip { filter: brightness(1.12); }
   .hero-art.is-photo img { -webkit-mask-image: none; mask-image: none; }
   .hero-art.is-photo::after { background: linear-gradient(0deg, var(--ink) 0%, rgba(14,14,14,.6) 35%, rgba(14,14,14,0) 70%); }
 }
+
+/* 手機＋有首頁主圖：上下排，照片在上完整顯示、文字在下，熊只當很淡的底 */
+@media (max-width: 760px) {
+  .hero.has-art { flex-direction: column; align-items: stretch; min-height: auto; padding-bottom: 2.5rem; }
+  .hero.has-art .hero-art { position: relative; inset: auto; width: 100%; height: min(62svh, 125vw); opacity: 1; flex: none; }
+  .hero.has-art .hero-art img { -webkit-mask-image: none; mask-image: none; }
+  .hero.has-art .hero-art::after { background: linear-gradient(0deg, var(--ink) 0%, rgba(14,14,14,0) 35%), linear-gradient(180deg, rgba(14,14,14,.55) 0%, rgba(14,14,14,0) 18%); }
+  .hero.has-art .hero-inner { padding-top: 0; margin-top: -3.2rem; }
+  .hero.has-art .hero-inner h1, .hero.has-art .hero-inner p { text-shadow: none; }
+  .hero.has-art .hero-bear { opacity: calc(var(--o) * .3); }
+}

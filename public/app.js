@@ -98,7 +98,7 @@ $$('.photo-slot[data-photo]').forEach(el => {
       el.dataset.cover = '1'; el.style.setProperty('--photo', 'none'); el.classList.add('has-photo', 'bear-bg');
       // 背景（預設是熊）：後台「首頁背景」可換圖、調左右/上下/放大/亮度 → site/config.heroBg
       const bg = document.createElement('img'); bg.className = 'hero-bear'; bg.alt = ''; el.appendChild(bg);
-      const art = document.querySelector('.hero-art img'); art.src = cover; art.closest('.hero-art').classList.add('is-photo');
+      const art = document.querySelector('.hero-art img'); art.src = cover; art.closest('.hero-art').classList.add('is-photo'); document.querySelector('.hero').classList.add('has-art');
       applyHero();
     };
     img.src = cover;
