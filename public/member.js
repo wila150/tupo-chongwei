@@ -14,7 +14,10 @@ const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m;
 const addMin = (t, n) => { const m = toMin(t) + n; return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-let idToken = null, me = null, cfg = null, busy = new Set(), packages = [], pendingSet = new Set();
+let idToken = null, me = null, cfg = null, busy = [], packages = [], pendingSet = new Set();
+// 已排的課 [date, 開始分鐘, 結束分鐘]；時段跟它重疊就是「已約滿」
+const addBusy = (date, time, min = 60) => busy.push([date, toMin(time), toMin(time) + min]);
+const delBusy = (date, time) => { busy = busy.filter(b => !(b[0] === date && b[1] === toMin(time))); };
 
 function toast(msg) {
   const t = $('#toast'); t.textContent = msg; t.hidden = false;
@@ -25,7 +28,7 @@ function toast(msg) {
 fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"action":"ping"}' }).catch(() => {});
 let tokenReady; const tokenP = new Promise(ok => { tokenReady = ok; });
 const CACHE = 'tupo_member_cache_v1';
-const saveCache = () => { try { localStorage.setItem(CACHE, JSON.stringify({ me, cfg, busy: [...busy], packages, t: Date.now() })); } catch {} };
+const saveCache = () => { try { localStorage.setItem(CACHE, JSON.stringify({ me, cfg, busy, packages, t: Date.now() })); } catch {} };
 
 async function call(action, body = {}) {
   if (!idToken) await tokenP;
@@ -54,7 +57,7 @@ async function loadPublic() {
     if (Array.isArray(d.closedDates)) cfg.closedDates = d.closedDates;
     if (d.contact) cfg.contact = { ...cfg.contact, ...d.contact };
   }
-  busy = new Set(b.status === 'fulfilled' ? b.value.docs.map(x => `${x.data().date} ${x.data().time}`) : []);
+  busy = []; if (b.status === 'fulfilled') b.value.docs.forEach(x => addBusy(x.data().date, x.data().time, x.data().minutes || 60));
   packages = p.status === 'fulfilled' ? p.value.docs.map(x => x.data()).filter(x => x.active !== false).sort((a, b) => a.credits - b.credits) : [];
 }
 
@@ -65,7 +68,7 @@ function slotState(date, time) {
   if (cfg.closedDates.includes(d)) return 'off';
   const s = toMin(time), e = s + (B.lessonMinutes || 60);
   if (cfg.classes.some(c => c.day === date.getDay() && s < toMin(c.end) + B.bufferMinutes && e > toMin(c.start) - B.bufferMinutes)) return 'class';
-  if (busy.has(`${d} ${time}`)) return 'full';
+  if (busy.some(b => b[0] === d && s < b[2] && e > b[1])) return 'full';
   return 'open';
 }
 
@@ -131,12 +134,12 @@ $('#sheetYes').addEventListener('click', async () => {
       toast('✓ 已送出，教練確認後會 LINE 通知你');
     } else {
       const r = await call('book', pending);
-      busy.add(`${pending.date} ${pending.time}`);
+      addBusy(pending.date, pending.time, cfg.booking.lessonMinutes || 60);
       $('#sheet').hidden = true;
       toast(`✓ 扣除 1 堂，預約成功（剩 ${r.credits} 堂）`);
     }
     await refreshMe();
-  } catch (err) { $('#sheetErr').textContent = err.message; if (/約走/.test(err.message)) { busy.add(`${pending.date} ${pending.time}`); renderSlots(); } }
+  } catch (err) { $('#sheetErr').textContent = err.message; if (/約走|已經有課/.test(err.message)) { addBusy(pending.date, pending.time, cfg.booking.lessonMinutes || 60); renderSlots(); } }
   btn.disabled = false; btn.textContent = pending?.mode === 'request' ? '送出申請' : '確認預約';
 });
 
@@ -168,7 +171,7 @@ $('#lessonList').addEventListener('click', async e => {
   e.target.disabled = true;
   try {
     const r = await call('cancel', { lessonId: id });
-    busy.delete(`${l.date} ${l.time}`);
+    delBusy(l.date, l.time);
     toast(`已取消，退回 1 堂（剩 ${r.credits} 堂）`);
     await refreshMe();
   } catch (err) { alert(err.message); e.target.disabled = false; }
@@ -214,7 +217,7 @@ $('#bindForm').addEventListener('submit', async e => {
   try {
     const c = JSON.parse(localStorage.getItem(CACHE) || 'null');
     if (c && c.me?.bound && Date.now() - c.t < 864e5) {
-      me = c.me; cfg = c.cfg; busy = new Set(c.busy); packages = c.packages || [];
+      me = c.me; cfg = c.cfg; busy = Array.isArray(c.busy?.[0]) ? c.busy : []; packages = c.packages || [];
       renderPlans(); renderWeek(); $('#bindView').hidden = true; $('#tabbar').hidden = false; renderMe();
       $('#loading').hidden = true; go(startTab); shown = true;
     }

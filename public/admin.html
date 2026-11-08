@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="theme-color" content="#0e0e0e">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611081713">
+  <link rel="stylesheet" href="styles.css?v=202611081721">
   <style>
     body { padding: 0; }
     [hidden] { display: none !important; }
@@ -400,7 +400,7 @@
           <label><input type="checkbox" value="0"><span>日</span></label>
           <label class="field lf-weeks">共<input type="number" id="lfWeeks" value="8" min="1" max="26">週</label>
         </div>
-        <p class="hint" style="margin:.8rem 0 .4rem">學員（可多選＝1 對 2、團體課，扣堂時每人各扣 1 堂）</p>
+        <p class="hint" style="margin:.8rem 0 .4rem">學員（可多選＝1 對 2、團體課，扣堂時每人各扣 1 堂；<b>不選＝教練行程</b>，只擋時段不給預約）</p>
         <input id="pickSearch" class="inp" placeholder="搜尋姓名或電話">
         <div class="picks" id="pickList"></div>
         <label class="field" style="margin-top:.8rem">備註<input id="lfNote" class="inp" maxlength="100"></label>
@@ -560,7 +560,7 @@
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611081713"></script>
-  <script type="module" src="admin.js?v=202611081713"></script>
+  <script src="data.js?v=202611081721"></script>
+  <script type="module" src="admin.js?v=202611081721"></script>
 </body>
 </html>

@@ -40,3 +40,5 @@
 - 後台「網站內容」：每個 panel 由 admin.js 包成下拉式（.acc，一次開一區，META 設圖示/標題/說明），照片相簿排第一；手機上每格是一行（縮圖＋按鈕），「管理相簿」＝全螢幕編輯（CSS .ph.open fixed；‹ 返回、★ 設封面、底部固定加照片）
 - 手機防放大：member.html／admin.html viewport `maximum-scale=1, user-scalable=no`＋`touch-action: manipulation`＋輸入框 16px（iPhone 點輸入框不自動拉近）
 - 學員 App 加速：localStorage `tupo_member_cache_v1` 先畫上次資料（24h 內）再背景更新；打開就 POST `{action:'ping'}` 叫醒 api；LIFF SDK 在 <head> async 先載；api `me` 三個查詢 Promise.all；verifyLine 依 token 快取（最多 30 分）
+- 時段佔用＝`busy/{date}_{HHMM}` { date, time, minutes }：網站／學員 App／api 都用「時間重疊」判斷（不是只比開始時間）；舊資料沒 minutes 當 60。後台載入課表時 syncBusy() 會把未來所有 scheduled 課補寫 busy
+- 「教練行程」：排課不選學員＝lessons { kind: 'block', studentIds: [] }，只擋時段、不扣堂、不算漏扣，卡片只有「刪除行程」

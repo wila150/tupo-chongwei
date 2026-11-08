@@ -110,7 +110,7 @@ $('#list').addEventListener('click', async e => {
     const batch = F.writeBatch(db);
     if (btn.dataset.act === 'confirm') {
       batch.update(F.doc(db, 'bookings', b.id), { status: 'confirmed' });
-      batch.set(slot, { date: b.date, time: b.time });
+      batch.set(slot, { date: b.date, time: b.time, minutes: 60 });
       await crm?.bookingConfirmed(b, batch);
     } else {
       if (!confirm(`取消 ${b.name} 的預約？`)) { btn.disabled = false; return; }

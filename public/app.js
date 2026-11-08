@@ -215,14 +215,14 @@ if (S.contact.lineOA) quick.href = `https://line.me/R/oaMessage/${S.contact.line
 else quick.closest('p').remove();
 const B = S.booking;
 const form = $('#bookingForm');
-const busy = new Set(); // "YYYY-MM-DD HH:MM" taken by confirmed bookings
+const busy = []; // 已排的課 { date, s, e }（分鐘）；預約時段只要跟它重疊就不開放
 
 async function loadBusy() {
   if (!db) return;
   try {
     const today = ymd(new Date());
     const q = fs.query(fs.collection(db, 'busy'), fs.where('date', '>=', today));
-    (await fs.getDocs(q)).forEach(d => busy.add(`${d.data().date} ${d.data().time}`));
+    (await fs.getDocs(q)).forEach(d => { const x = d.data(), s = toMin(x.time); busy.push({ date: x.date, s, e: s + (x.minutes || 60) }); });
   } catch (e) { console.warn('load busy failed', e); }
 }
 
@@ -230,7 +230,7 @@ function slotState(date, time) {
   const start = toMin(time), end = start + B.lessonMinutes;
   const dt = new Date(`${ymd(date)}T${time}:00`);
   if (dt - Date.now() < B.minHoursAhead * 3600e3) return false;
-  if (busy.has(`${ymd(date)} ${time}`)) return false;
+  if (busy.some(b => b.date === ymd(date) && start < b.e && end > b.s)) return false;
   if (S.closedDates.includes(ymd(date))) return false;
   return !S.classes.some(c => c.day === date.getDay() &&
     start < toMin(c.end) + B.bufferMinutes && end > toMin(c.start) - B.bufferMinutes);

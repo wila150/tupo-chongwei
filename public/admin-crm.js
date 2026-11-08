@@ -64,10 +64,18 @@ export function initCrm({ F, db, esc, $ }) {
     renderPackages();
   }, err => console.warn('packages', err));
   const since = new Date(); since.setDate(since.getDate() - 60);
+  // 後台打開時：未來每堂已排的課都補寫一次 busy（含長度），讓網站/學員 App 不會開放跟它重疊的時段
+  let busySynced = false;
+  function syncBusy() {
+    if (busySynced) return; busySynced = true;
+    const today = ymd(new Date()), b = F.writeBatch(db); let n = 0;
+    for (const l of lessons) if (l.status === 'scheduled' && l.date >= today && l.time && n < 450) { b.set(F.doc(db, 'busy', `${l.date}_${l.time.replace(':', '')}`), { date: l.date, time: l.time, minutes: l.minutes || 60 }); n++; }
+    if (n) b.commit().catch(e => console.warn('sync busy', e));
+  }
   F.onSnapshot(F.query(F.collection(db, 'lessons'), F.where('date', '>=', ymd(since))), snap => {
     lessons = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-    renderLessons(); renderHome();
+    renderLessons(); renderHome(); syncBusy();
   }, err => console.warn('lessons', err));
 
   /* ================= 課務扣堂 ================= */
@@ -78,9 +86,11 @@ export function initCrm({ F, db, esc, $ }) {
       const att = l.attend?.[id] === 'yes' ? ' <span class="tag ok">✓ 準時到</span>' : l.attend?.[id] === 'leave' ? ' <span class="tag bad">請假</span>' : '';
       const low = s && s.credits <= RENEW_AT ? ` <span class="tag warn">剩 ${s.credits}</span>` : s ? ` <span class="tag">剩 ${s.credits}</span>` : '';
       return esc(name) + low + att;
-    }).join('、') || '<span class="muted">（未指定學員）</span>';
+    }).join('、') || (l.kind === 'block' ? '<span class="tag">🔒 教練行程・不開放預約</span>' : '<span class="muted">（未指定學員）</span>');
     const acts = [];
-    if (l.status === 'scheduled') {
+    if (l.status === 'scheduled' && l.kind === 'block') {
+      acts.push(`<button class="btn btn-ghost btn-sm" data-cancel="${l.id}">刪除行程</button>`);
+    } else if (l.status === 'scheduled') {
       acts.push(`<button class="btn btn-sm" data-deduct="${l.id}">完課扣堂</button>`);
       acts.push(`<button class="btn btn-ghost btn-sm" data-cancel="${l.id}">取消這堂</button>`);
     } else if (l.status === 'done' && now - (l.doneAtMs || 0) < UNDO_MS) {
@@ -97,7 +107,7 @@ export function initCrm({ F, db, esc, $ }) {
   function renderLessons() {
     const now = Date.now(), today = ymd(new Date());
     const wk = new Date(); wk.setDate(wk.getDate() + 7); const week = ymd(wk);
-    const missed = lessons.filter(l => l.status === 'scheduled' && endMs(l) < now);
+    const missed = lessons.filter(l => l.status === 'scheduled' && l.kind !== 'block' && endMs(l) < now);
     const todayL = lessons.filter(l => l.date === today && !(l.status === 'scheduled' && endMs(l) < now));
     const upcoming = lessons.filter(l => l.date > today && l.date <= week && l.status === 'scheduled');
     const recent = lessons.filter(l => l.status === 'done' && now - (l.doneAtMs || 0) < UNDO_MS && l.date !== today);
@@ -187,7 +197,8 @@ export function initCrm({ F, db, esc, $ }) {
     const days = [...document.querySelectorAll('#lfDays input:checked')].map(i => Number(i.value));
     const weeks = Math.min(26, Math.max(1, Number($('#lfWeeks').value) || 1));
     if (!date || !time) return msg.textContent = '請填日期和時間';
-    if (!picked.size) return msg.textContent = '請至少選一位學員';
+    const block = !picked.size; // 沒選學員＝教練行程：只擋時段不給預約、不扣堂
+    if (block && !confirm('沒有選學員，要排成「教練行程」嗎？\n（只把這段時間擋起來，網站和 LINE 都約不到；不扣堂）')) return;
     const ids = [...picked], names = ids.map(id => byId(id)?.name || '');
     let dates = [date];
     if (days.length) {
@@ -202,9 +213,9 @@ export function initCrm({ F, db, esc, $ }) {
     if (dates.length > 1 && !confirm(`會建立 ${dates.length} 堂課（${md(dates[0])} ～ ${md(dates.at(-1))}），確定？`)) return;
     const seriesId = dates.length > 1 ? `s${Date.now()}` : null;
     const b = F.writeBatch(db);
-    for (const d of dates) b.set(F.doc(db, 'busy', `${d}_${time.replace(':', '')}`), { date: d, time });
+    for (const d of dates) b.set(F.doc(db, 'busy', `${d}_${time.replace(':', '')}`), { date: d, time, minutes });
     for (const d of dates) b.set(F.doc(F.collection(db, 'lessons')), {
-      date: d, time, minutes, studentIds: ids, studentNames: names, status: 'scheduled', seriesId, note: $('#lfNote').value.trim(), createdAt: F.serverTimestamp()
+      date: d, time, minutes, studentIds: ids, studentNames: names, status: 'scheduled', seriesId, note: $('#lfNote').value.trim() || (block ? '教練行程' : ''), ...(block ? { kind: 'block' } : {}), createdAt: F.serverTimestamp()
     });
     try {
       await b.commit();
@@ -425,7 +436,7 @@ export function initCrm({ F, db, esc, $ }) {
     if (!$('#homeKpis')) return;
     const now = Date.now(), today = todayStr();
     const todayL = lessons.filter(l => l.date === today && l.status !== 'cancelled');
-    const missed = lessons.filter(l => l.status === 'scheduled' && endMs(l) < now);
+    const missed = lessons.filter(l => l.status === 'scheduled' && l.kind !== 'block' && endMs(l) < now);
     const renew = students.filter(s => s.credits <= RENEW_AT && !s.blocked);
     const expiring = students.filter(s => { const d = daysLeft(s); return d !== null && d >= 0 && d <= 14; });
     const kpi = (cls, ic, label, val, sub, go) => `<div class="kpi ${cls}" data-goto="${go}"><span class="kpi-ic">${ic}</span><small>${label}</small><b>${val}</b><small>${sub}</small></div>`;
@@ -437,9 +448,9 @@ export function initCrm({ F, db, esc, $ }) {
       kpi('ok', IC.money, `${new Date().getMonth() + 1} 月收入`, monthRevenue === null ? '…' : '$' + monthRevenue.toLocaleString(), '看報表', 'report');
     $('#homeToday').innerHTML = todayL.length ? `<div class="tl">${todayL.map(l => {
       const st = l.status === 'done' ? 'done' : (new Date(`${l.date}T${l.time}:00`).getTime() <= now && endMs(l) >= now ? 'now' : '');
-      const names = l.studentIds.map((id, i) => byId(id)?.name || l.studentNames?.[i] || '').filter(Boolean).join('、') || '未指定學員';
+      const names = l.kind === 'block' ? `🔒 ${l.note || '教練行程'}` : l.studentIds.map((id, i) => byId(id)?.name || l.studentNames?.[i] || '').filter(Boolean).join('、') || '未指定學員';
       return `<div class="tl-item ${st}"><span class="tl-t">${l.time}</span><span class="tl-dot"></span><div><b>${esc(names)}</b><small>${l.minutes || 60} 分${l.source === 'line' ? '・LINE 預約' : ''}${st === 'now' ? '・上課中' : ''}</small></div>
-        ${l.status === 'done' ? '<span class="tag ok">已扣堂</span>' : `<button class="btn btn-sm" data-deduct="${l.id}">完課扣堂</button>`}</div>`;
+        ${l.kind === 'block' ? '<span class="tag">不開放預約</span>' : l.status === 'done' ? '<span class="tag ok">已扣堂</span>' : `<button class="btn btn-sm" data-deduct="${l.id}">完課扣堂</button>`}</div>`;
     }).join('')}</div>` : `<div class="empty-state">${IC.cal.replace('<svg', '<svg')}<b>今天沒有排課</b>好好休息，或到「課務扣堂」排新的課</div>`;
     const todo = [
       ...pendingBk.map(b => ({ c: '#f0b429', t: `${b.name} 預約 ${md(b.date)} ${b.time}`, s: '待確認', go: 'bookings' })),

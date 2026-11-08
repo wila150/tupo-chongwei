@@ -86,6 +86,13 @@ async function verifyLine(idToken) {
   tokenCache.set(idToken, { me, exp: Math.min((j.exp || 0) * 1000, Date.now() + 30 * 60e3) });
   return me;
 }
+// 這個時段是否跟已排的課重疊（busy 文件有 time＋minutes；舊資料沒 minutes 當 60 分）
+async function busyClash(date, time, minutes = 60, tx = null) {
+  const q = db.collection('busy').where('date', '==', date);
+  const snap = tx ? await tx.get(q) : await q.get();
+  const s = toMin(time), e = s + minutes;
+  return snap.docs.some(d => { const x = d.data(), bs = toMin(x.time), be = bs + (x.minutes || 60); return s < be && e > bs; });
+}
 const httpErr = (code, msg) => Object.assign(new Error(msg), { code });
 
 async function studentByLine(uid) {
@@ -180,13 +187,14 @@ export const api = onRequest({ invoker: 'public', cors: [SITE, 'https://tupo-cho
       const busyRef = db.doc(`busy/${date}_${time.replace(':', '')}`);
       const lessonRef = db.collection('lessons').doc();
       const left = await db.runTransaction(async tx => {
-        const [s, busy] = await Promise.all([tx.get(st.ref), tx.get(busyRef)]);
+        const mins = cfg.booking.lessonMinutes || 60;
+        const [s, clash] = await Promise.all([tx.get(st.ref), busyClash(date, time, mins, tx)]);
         const d = s.data();
         if (d.blocked) throw httpErr(403, '帳號暫停預約，請聯絡教練');
         if ((d.credits || 0) < 1) throw httpErr(400, '剩餘堂數不足，請先向教練購買方案');
         if (d.expiresAt && d.expiresAt < date) throw httpErr(400, `方案 ${d.expiresAt} 到期，這堂超過有效期限`);
-        if (busy.exists) throw httpErr(409, '這個時段剛被約走了，請換一個時間');
-        tx.set(busyRef, { date, time });
+        if (clash) throw httpErr(409, '這個時段教練已經有課了，請換一個時間');
+        tx.set(busyRef, { date, time, minutes: mins });
         tx.set(lessonRef, { date, time, minutes: cfg.booking.lessonMinutes || 60, studentIds: [st.id], studentNames: [d.name], status: 'scheduled', paid: true, source: 'line', seriesId: null, note: 'LINE 線上預約（已扣堂）', createdAt: FieldValue.serverTimestamp() });
         tx.update(st.ref, { credits: FieldValue.increment(-1) });
         tx.set(st.ref.collection('ledger').doc(), { type: 'deduct', delta: -1, lessonId: lessonRef.id, note: `預約 ${date} ${time}`, at: FieldValue.serverTimestamp() });
@@ -203,7 +211,7 @@ export const api = onRequest({ invoker: 'public', cors: [SITE, 'https://tupo-cho
       if (st.blocked) throw httpErr(403, '帳號暫停預約，請聯絡教練');
       const cfg = await siteConfig();
       const bad = slotOk(cfg, date, time); if (bad) throw httpErr(400, bad);
-      if ((await db.doc(`busy/${date}_${time.replace(':', '')}`).get()).exists) throw httpErr(409, '這個時段剛被約走了，請換一個時間');
+      if (await busyClash(date, time, cfg.booking.lessonMinutes || 60)) throw httpErr(409, '這個時段教練已經有課了，請換一個時間');
       const mine = await db.collection('bookings').where('lineUserId', '==', me.uid).get();
       if (mine.docs.some(d => d.data().status === 'pending' && d.data().date === date && d.data().time === time)) throw httpErr(409, '這個時段已經申請過了，等教練確認喔');
       if (mine.docs.filter(d => d.data().status === 'pending').length >= 3) throw httpErr(429, '已經有 3 筆待確認的預約，請等教練確認後再申請');
@@ -326,7 +334,7 @@ async function onBookingPostback(ev, q) {
     if (b.status !== 'pending') return { msg: `這筆預約已經是「${b.status === 'confirmed' ? '已確認' : '已取消'}」了` };
     if (q.get('bk') === 'reject') { tx.update(ref, { status: 'cancelled', handledBy: 'line' }); return { msg: `已婉拒 ${b.name} ${md(b.date)} ${b.time}${b.lineUserId ? '，已通知客人' : ''}` }; }
     const busyRef = db.doc(`busy/${b.date}_${b.time.replace(':', '')}`);
-    if ((await tx.get(busyRef)).exists) return { msg: `⚠️ ${md(b.date)} ${b.time} 已經有其他課了，請到後台處理` };
+    if (await busyClash(b.date, b.time, 60, tx)) return { msg: `⚠️ ${md(b.date)} ${b.time} 跟已排的課時間重疊，請到後台處理` };
     const students = await tx.get(db.collection('students'));
     const p = normPhone(b.phone);
     const hit = students.docs.find(d => p && normPhone(d.data().phone) === p);
@@ -337,7 +345,7 @@ async function onBookingPostback(ev, q) {
       tx.set(sref, { name: b.name, phone: b.phone, lineId: b.lineId || '', note: '網站預約', credits: 0, createdAt: FieldValue.serverTimestamp(), ...(b.lineUserId ? { lineUserId: b.lineUserId, lineName: b.lineName || '' } : {}) });
     }
     tx.update(ref, { status: 'confirmed', handledBy: 'line' });
-    tx.set(busyRef, { date: b.date, time: b.time });
+    tx.set(busyRef, { date: b.date, time: b.time, minutes: 60 });
     tx.set(db.doc(`lessons/bk_${ref.id}`), { date: b.date, time: b.time, minutes: 60, studentIds: [sid], studentNames: [b.name], status: 'scheduled', seriesId: null,
       note: `網站預約${b.people > 1 ? `・${b.people} 人` : ''}`, bookingId: ref.id, createdAt: FieldValue.serverTimestamp() });
     return { msg: `✅ 已確認 ${b.name} ${md(b.date)} ${b.time}，已排進課表${b.lineUserId ? '、已通知客人' : '（客人沒綁 LINE，請電話聯絡 ' + b.phone + '）'}` };
@@ -384,7 +392,7 @@ export const nightlyReminder = onSchedule({ schedule: '0 20 * * *', timeZone: 'A
       names.push(st.name + (st.lineUserId ? '' : '（未綁 LINE）'));
       if (st.lineUserId) { await push(st.lineUserId, [reminderCard(l, st)]); sent++; }
     }
-    lines.push(`${l.time} ${names.join('、')}`);
+    lines.push(`${l.time} ${l.kind === 'block' ? `🔒 ${l.note || '教練行程'}` : names.join('、')}`);
   }
   if (lines.length) await notifyAdmins(`📋 明天 ${md(tomorrow)} 的課（已提醒 ${sent} 位學員）\n${lines.sort().join('\n')}`);
   logger.info('reminders', tomorrow, sent);
