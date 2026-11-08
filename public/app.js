@@ -164,6 +164,10 @@ addEventListener('message', e => {
   S.heroArt = e.data.heroArt; S.heroBg = e.data.heroBg; applyHero();
 });
 
+/* 手機：首頁上方的按鈕還看得到時，先藏起右邊浮動的 LINE／IG／預約（重複又會蓋住按鈕） */
+{ const cta = document.querySelector('.hero .hero-cta');
+  if (cta) new IntersectionObserver(es => document.body.classList.toggle('hero-cta-on', es[0].isIntersecting)).observe(cta); }
+
 /* ---------- schedule ---------- */
 const order = d => (d + 6) % 7; // Monday first
 $('#scheduleList').innerHTML = [...S.classes]
