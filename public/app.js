@@ -96,6 +96,7 @@ $$('.photo-slot[data-photo]').forEach(el => {
     img.src = cover;
   }
   if (slot === 'hero' || (!list.length && !reels.length)) return;
+  if (list.length > 1) slotSlideshow(el, list.map(x => x.url));
   const title = albumTitles[slot] || '';
   const cap = document.createElement('div');
   cap.className = 'slot-cap';
@@ -109,6 +110,26 @@ $$('.photo-slot[data-photo]').forEach(el => {
   el.addEventListener('click', go);
   el.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
 });
+
+/* 首頁照片格輪播：相簿有多張就每 4 秒淡入下一張（各格錯開；看不到、或滑鼠移上去時暫停） */
+function slotSlideshow(el, urls) {
+  const layers = urls.map((u, i) => { const d = document.createElement('div'); d.className = 'slot-fade' + (i ? '' : ' on'); d.dataset.src = u; el.appendChild(d); return d; });
+  const dots = document.createElement('div'); dots.className = 'slot-dots';
+  dots.innerHTML = urls.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join(''); el.appendChild(dots);
+  const load = d => { if (d.dataset.src) { d.style.backgroundImage = `url('${d.dataset.src}')`; delete d.dataset.src; } };
+  load(layers[0]); load(layers[1]);
+  let i = 0, hover = false, seen = false;
+  el.addEventListener('mouseenter', () => hover = true); el.addEventListener('mouseleave', () => hover = false);
+  new IntersectionObserver(es => { seen = es[0].isIntersecting; }).observe(el);
+  const delay = 1300 * (slotSlideshow.n = (slotSlideshow.n || 0) + 1);
+  setTimeout(() => setInterval(() => {
+    if (hover || !seen || document.hidden) return;
+    layers[i].classList.remove('on'); dots.children[i].classList.remove('on');
+    i = (i + 1) % layers.length;
+    layers[i].classList.add('on'); dots.children[i].classList.add('on');
+    load(layers[(i + 1) % layers.length]);
+  }, 4000), delay);
+}
 
 /* ---------- schedule ---------- */
 const order = d => (d + 6) % 7; // Monday first

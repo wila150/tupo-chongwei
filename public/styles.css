@@ -298,3 +298,11 @@ details p { color: var(--muted); margin-top: .6rem; }
   .gallery::-webkit-scrollbar { display: none; }
   .gallery .photo-slot { flex: 0 0 82%; scroll-snap-align: start; }
 }
+
+/* 首頁照片格輪播 */
+.slot-fade { position: absolute; inset: 0; background: center/cover no-repeat; opacity: 0; transition: opacity 1s ease; z-index: 0; }
+.slot-fade.on { opacity: 1; }
+.photo-slot .slot-cap { z-index: 1; }
+.slot-dots { position: absolute; top: .8rem; left: .9rem; z-index: 1; display: flex; gap: .3rem; }
+.slot-dots i { width: 6px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.45); transition: width .3s, background .3s; }
+.slot-dots i.on { width: 16px; background: #fff; }
