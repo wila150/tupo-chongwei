@@ -29,6 +29,6 @@
 - Storage 規則要讀 Firestore admins：Storage 服務帳號需要 roles/firebaserules.firestoreServiceAgent（2026-11-08 已加，少了會全部上傳失敗）
 
 - IG 影片＝`public/reels.js` 共用輪播（首頁＋相簿頁）：電腦 3 張／平板 2／手機 1，scroll-snap＋箭頭＋圓點。封面 `site/config.reelCovers[網址]`（後台每支「封面」從媒體庫選），沒封面就用 IG `/embed/` iframe 裁掉上方 54px 帳號列與下方按讚區
-- 相簿頁照片＝輪播（album.html `.al-show`：左右滑、箭頭、縮圖列、5 秒自動換、模糊背景補邊，點開燈箱）；首頁三格照片一樣大（手機橫滑）
+- 相簿頁照片＝輪播（album.html `.al-show`：左右滑、箭頭、縮圖列、7 秒自動換、模糊背景補邊，點開燈箱）；首頁三格照片一樣大（手機橫滑）
 - IG embed 會 postMessage `MEASURE` 總高：總高 = 54 + 影片 + 130 → reels.js 推算比例（4:5/1:1/16:9/1.91:1），扁的用 transform scale 放大填滿（左右裁）。有些 Reels 嵌入不能直接播（IG 規定，多半是用了版權音樂），只會顯示「在 Instagram 觀看」
-- 首頁照片格：相簿多張時每 4 秒淡入輪播（app.js slotSlideshow，三格錯開，滑鼠移上去/看不到時暫停），左上小圓點
+- 首頁照片格：相簿多張時每 7 秒淡入輪播（app.js slotSlideshow，三格錯開，滑鼠移上去/看不到時暫停），左上小圓點

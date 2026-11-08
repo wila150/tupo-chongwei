@@ -43,7 +43,7 @@ const lb = $('#lightbox'); let cur = 0;
 const show = i => { cur = (i + photos.length) % photos.length; $('#lbImg').src = photos[cur].url; $('#lbCap').textContent = `${photos[cur].caption || ''}　${cur + 1} / ${photos.length}`; lb.hidden = false; };
 document.addEventListener('click', e => { const f = e.target.closest('.al-track figure'); if (f) show(Number(f.dataset.i)); });
 
-/* 照片輪播：左右滑、箭頭、縮圖，5 秒自動換下一張（滑鼠移上去、手指碰到、看大圖時暫停） */
+/* 照片輪播：左右滑、箭頭、縮圖，7 秒自動換下一張（滑鼠移上去、手指碰到、看大圖時暫停） */
 const show_ = document.querySelector('.al-show');
 if (show_ && photos.length > 1) {
   const track = show_.querySelector('.al-track'), thumbs = [...document.querySelectorAll('.al-thumbs button')];
@@ -59,7 +59,7 @@ if (show_ && photos.length > 1) {
   let hold = false;
   show_.addEventListener('mouseenter', () => hold = true); show_.addEventListener('mouseleave', () => hold = false);
   track.addEventListener('touchstart', () => { hold = true; }, { passive: true });
-  setInterval(() => { if (!hold && lb.hidden && !document.hidden) go(at() + 1); }, 5000);
+  setInterval(() => { if (!hold && lb.hidden && !document.hidden) go(at() + 1); }, 7000);
 }
 lb.addEventListener('click', e => { const a = e.target.closest('[data-lb]')?.dataset.lb; if (a === 'prev') show(cur - 1); else if (a === 'next') show(cur + 1); else if (a === 'close' || e.target === lb) lb.hidden = true; });
 addEventListener('keydown', e => { if (lb.hidden) return; if (e.key === 'ArrowLeft') show(cur - 1); if (e.key === 'ArrowRight') show(cur + 1); if (e.key === 'Escape') lb.hidden = true; });

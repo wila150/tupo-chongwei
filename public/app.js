@@ -111,7 +111,7 @@ $$('.photo-slot[data-photo]').forEach(el => {
   el.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
 });
 
-/* 首頁照片格輪播：相簿有多張就每 4 秒淡入下一張（各格錯開；看不到、或滑鼠移上去時暫停） */
+/* 首頁照片格輪播：相簿有多張就每 7 秒淡入下一張（各格錯開；看不到、或滑鼠移上去時暫停） */
 function slotSlideshow(el, urls) {
   const layers = urls.map((u, i) => { const d = document.createElement('div'); d.className = 'slot-fade' + (i ? '' : ' on'); d.dataset.src = u; el.appendChild(d); return d; });
   const dots = document.createElement('div'); dots.className = 'slot-dots';
@@ -128,7 +128,7 @@ function slotSlideshow(el, urls) {
     i = (i + 1) % layers.length;
     layers[i].classList.add('on'); dots.children[i].classList.add('on');
     load(layers[(i + 1) % layers.length]);
-  }, 4000), delay);
+  }, 7000), delay);
 }
 
 /* ---------- schedule ---------- */
