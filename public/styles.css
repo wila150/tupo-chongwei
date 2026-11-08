@@ -346,3 +346,9 @@ a.reel-frame:hover .reel-clip { filter: brightness(1.12); }
   .hero.has-art .hero-inner h1, .hero.has-art .hero-inner p { text-shadow: none; }
   .hero.has-art .hero-bear { opacity: calc(var(--o) * .3); }
 }
+/* 手機＋主圖：熊在左、照片在右（跟電腦版一樣的感覺） */
+@media (max-width: 760px) {
+  .hero.has-art .hero-art img { left: auto; right: 0; width: 74%; position: absolute; top: 0; height: 100%; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%); mask-image: linear-gradient(90deg, transparent 0%, #000 14%); }
+  .hero.has-art .hero-bear { inset: 0 auto auto 0; width: 62%; height: min(62svh, 125vw); object-fit: cover; object-position: 30% 30%; transform: none; opacity: calc(var(--o) * 1.3); }
+  .hero.has-art .hero-bg::after { background: linear-gradient(0deg, var(--ink) 0%, rgba(14,14,14,.7) calc(100% - min(62svh, 125vw)), rgba(14,14,14,.15) 70%, rgba(14,14,14,.4) 100%); }
+}
