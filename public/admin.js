@@ -19,6 +19,31 @@ const auth = A.getAuth(app);
 const db = F.getFirestore(app);
 const storage = ST.getStorage(app);
 
+// 閒置就休息（2026/11/09）：後台分頁在背景超過 5 分鐘、或 20 分鐘沒動滑鼠鍵盤，就暫停 Firestore 連線；
+// 回到分頁或一動滑鼠就恢復（恢復時即時監聽會自動補上這段時間的變更）。
+// 背景門檻用 5 分鐘不用 1 分鐘：每次恢復都會重讀監聽中的資料，切分頁太頻繁反而多花讀取次數。
+{
+  const IDLE_MS = 20 * 60 * 1000, HIDDEN_MS = 5 * 60 * 1000;
+  let paused = false, idleTimer = null, hideTimer = null, last = 0;
+  const pause = () => { if (!paused) { paused = true; F.disableNetwork(db).catch(() => {}); } };
+  const resume = () => { if (paused) { paused = false; F.enableNetwork(db).catch(() => {}); } };
+  const active = () => {
+    const now = Date.now();
+    if (!paused && now - last < 5000) return; // mousemove 很密，5 秒內只重設一次
+    last = now;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(pause, IDLE_MS);
+    if (!document.hidden) resume();
+  };
+  document.addEventListener('visibilitychange', () => {
+    clearTimeout(hideTimer);
+    if (document.hidden) hideTimer = setTimeout(pause, HIDDEN_MS);
+    else active();
+  });
+  ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(ev => window.addEventListener(ev, active, { passive: true }));
+  active();
+}
+
 let all = [], filter = 'pending', unsub = null, pendingCount = 0;
 
 $('#logout').addEventListener('click', () => A.signOut(auth));
