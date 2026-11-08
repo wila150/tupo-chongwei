@@ -255,7 +255,7 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
   const sig = req.get('x-line-signature') || '';
   const mac = crypto.createHmac('sha256', process.env.LINE_MSG_SECRET).update(req.rawBody).digest('base64');
   if (!sig || sig.length !== mac.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(mac))) return res.status(401).send('bad signature');
-  res.status(200).send('ok');
+  // 先處理完再回 200：Cloud Functions v2 回應後 CPU 會被暫停，放在回應後面的工作可能做不完
   for (const ev of req.body.events || []) {
     try {
       if (ev.type === 'postback') { await onPostback(ev); continue; }
@@ -281,6 +281,7 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
       }
     } catch (e) { logger.error('webhook', e); }
   }
+  res.status(200).send('ok');
 });
 
 /* ---------- LINE 訊息收件匣：chats/{LINE uid}（名字、頭像、最後一則、未讀）＋ chats/{uid}/msgs ---------- */

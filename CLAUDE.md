@@ -41,10 +41,11 @@
 - 手機防放大：member.html／admin.html viewport `maximum-scale=1, user-scalable=no`＋`touch-action: manipulation`＋輸入框 16px（iPhone 點輸入框不自動拉近）
 - 學員 App 加速：localStorage `tupo_member_cache_v1` 先畫上次資料（24h 內）再背景更新；打開就 POST `{action:'ping'}` 叫醒 api；LIFF SDK 在 <head> async 先載；api `me` 三個查詢 Promise.all；verifyLine 依 token 快取（最多 30 分）
 - 時段佔用＝`busy/{date}_{HHMM}` { date, time, minutes }：網站／學員 App／api 都用「時間重疊」判斷（不是只比開始時間）；舊資料沒 minutes 當 60。後台載入課表時 syncBusy() 會把未來所有 scheduled 課補寫 busy
-- LINE 通知綁定：傳「通知綁定 <NOTIFY_CODE>」或只傳密碼都可以（2026-11-08 已手動把使用者 Big Zhuang 的 LINE 加進 notify/config.lineUserIds）
+- LINE 通知綁定：傳「通知綁定 <NOTIFY_CODE>」或只傳密碼都可以（2026-11-08 手動加：Big Zhuang U775f…、Lu🐛 Ub53a…）
 - 「教練行程」：排課不選學員＝lessons { kind: 'block', studentIds: [] }，只擋時段、不扣堂、不算漏扣，卡片只有「刪除行程」
 - 網站預約送出後顯示預約單（#receipt），樣式/欄位跟 LINE bookingCard 一樣，附預約編號
 - 網站「立即預約（LINE）」→ https://liff.line.me/<liffId>（在 LINE 開同一份表單 /?book，預約單傳到客人 LINE）；沒 liffId 才退回 oaMessage
 - 網站預約完成＝「預約成功！」＋預約單，不強制跳 LINE（教練靠 onBookingCreated 收 LINE 通知）；「也想用 LINE 跟教練說一聲（選填）」開 oaMessage 預填完整預約單；「立即預約」只捲到表單
 - 後台🔔鈴鐺（admin-crm.js renderBell/newArrivals/lineArrivals/alertNew）：待確認預約、3 天內 LINE App 預約、學員取消、漏扣；新預約跳提示＋叮聲＋（允許時）桌面通知；分頁標題顯示未處理數；已讀時間存 localStorage tupo_bell_seen
+- lineWebhook 要「處理完才回 200」（v2 回應後 CPU 暫停，之前綁定／收件匣會做不完）
 - LINE 訊息收件匣：lineWebhook 把所有訊息／加好友／封鎖存到 `chats/{LINE uid}`（name、pic、studentId/studentName、last、lastDir、lastAt、unread）＋`chats/{uid}/msgs`（dir in/out/system）；後台「訊息」頁（admin.js startInbox/openThread）即時看、回覆走新 function `adminChat`（Firebase ID token＋admins 驗證 → LINE push，會吃每月免費額度）。11/8 以前的訊息沒存，查不到。手機底部列隱藏「報表」換成「訊息」
