@@ -38,3 +38,5 @@
 - 手機＋有首頁主圖（.hero.has-art）：上下排，上方熊在左（.hero-bear 62% 寬）、照片在右（74% 寬），文字在下
 - 手機首頁＝剛好一個螢幕（100svh，照片 flex 吃剩餘高度、文字按鈕固定在下）；首頁按鈕看得到時隱藏右側浮動 LINE/IG/預約（body.hero-cta-on）
 - 後台「網站內容」：每個 panel 由 admin.js 包成下拉式（.acc，一次開一區，META 設圖示/標題/說明），照片相簿排第一；手機上每格是一行（縮圖＋按鈕），「管理相簿」＝全螢幕編輯（CSS .ph.open fixed；‹ 返回、★ 設封面、底部固定加照片）
+- 手機防放大：member.html／admin.html viewport `maximum-scale=1, user-scalable=no`＋`touch-action: manipulation`＋輸入框 16px（iPhone 點輸入框不自動拉近）
+- 學員 App 加速：localStorage `tupo_member_cache_v1` 先畫上次資料（24h 內）再背景更新；打開就 POST `{action:'ping'}` 叫醒 api；LIFF SDK 在 <head> async 先載；api `me` 三個查詢 Promise.all；verifyLine 依 token 快取（最多 30 分）

@@ -2,12 +2,17 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <link rel="preconnect" href="https://asia-east1-tupo-chongwei.cloudfunctions.net" crossorigin>
+  <link rel="preconnect" href="https://static.line-scdn.net">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <style>html { touch-action: manipulation; -webkit-text-size-adjust: 100%; } input, select, textarea { font-size: 16px !important; }</style>
   <meta name="robots" content="noindex">
   <title>學員預約｜突破重圍</title>
   <link rel="icon" href="img/icon-192.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611081708">
+  <link rel="stylesheet" href="styles.css?v=202611081713">
   <style>
     [hidden] { display: none !important; }
     body { padding: 0 0 calc(76px + env(safe-area-inset-bottom)); min-height: 100svh; }
@@ -149,7 +154,8 @@
   </div>
   <div class="toast" id="toast" hidden></div>
 
-  <script src="data.js?v=202611081708"></script>
-  <script type="module" src="member.js?v=202611081708"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" async></script>
+  <script src="data.js?v=202611081713"></script>
+  <script type="module" src="member.js?v=202611081713"></script>
 </body>
 </html>

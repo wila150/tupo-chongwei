@@ -21,7 +21,14 @@ function toast(msg) {
   clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600);
 }
 
+// 伺服器休眠時第一次要等比較久 → 頁面一打開就先叫醒它（跟 LINE 初始化同時進行）
+fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"action":"ping"}' }).catch(() => {});
+let tokenReady; const tokenP = new Promise(ok => { tokenReady = ok; });
+const CACHE = 'tupo_member_cache_v1';
+const saveCache = () => { try { localStorage.setItem(CACHE, JSON.stringify({ me, cfg, busy: [...busy], packages, t: Date.now() })); } catch {} };
+
 async function call(action, body = {}) {
+  if (!idToken) await tokenP;
   const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, idToken, ...body }) });
   const j = await r.json().catch(() => ({ error: '連線失敗' }));
   if (!r.ok) throw new Error(j.error || '系統忙碌');
@@ -176,7 +183,7 @@ function go(tab) {
 document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
 
 async function refreshMe() {
-  me = await call('me');
+  me = await call('me'); saveCache();
   if (!me.bound) return showBind();
   $('#bindView').hidden = true; $('#tabbar').hidden = false;
   renderMe();
@@ -200,17 +207,36 @@ $('#bindForm').addEventListener('submit', async e => {
 
 /* ---------- 啟動 ---------- */
 (async () => {
+  const tab = new URLSearchParams(location.search).get('tab');
+  const startTab = ['book', 'lessons', 'plans', 'me'].includes(tab) ? tab : 'book';
+  // 先用這支手機上次的資料馬上畫出來（24 小時內），背景再更新成最新
+  let shown = false;
   try {
-    await new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
-    await Promise.all([window.liff.init({ liffId: LIFF_ID }), loadPublic()]);
+    const c = JSON.parse(localStorage.getItem(CACHE) || 'null');
+    if (c && c.me?.bound && Date.now() - c.t < 864e5) {
+      me = c.me; cfg = c.cfg; busy = new Set(c.busy); packages = c.packages || [];
+      renderPlans(); renderWeek(); $('#bindView').hidden = true; $('#tabbar').hidden = false; renderMe();
+      $('#loading').hidden = true; go(startTab); shown = true;
+    }
+  } catch {}
+  try {
+    await new Promise((ok, no) => { // LIFF SDK 已經在 <head> 先開始下載
+      if (window.liff) return ok();
+      const sc = document.querySelector('script[src*="liff/edge"]'); sc.addEventListener('load', ok); sc.addEventListener('error', () => no(new Error('LINE 載入失敗')));
+    });
+    const pub = loadPublic();
+    await window.liff.init({ liffId: LIFF_ID });
     if (!window.liff.isLoggedIn()) { window.liff.login({ redirectUri: location.href }); return; }
-    idToken = window.liff.getIDToken();
-    renderPlans(); renderWeek();
-    await refreshMe();
-    const tab = new URLSearchParams(location.search).get('tab');
-    if (me.bound) { $('#loading').hidden = true; go(['book', 'lessons', 'plans', 'me'].includes(tab) ? tab : 'book'); }
+    idToken = window.liff.getIDToken(); tokenReady();
+    const meP = call('me');
+    await pub; renderPlans(); renderWeek();
+    me = await meP; saveCache();
+    if (!me.bound) return showBind();
+    $('#bindView').hidden = true; $('#tabbar').hidden = false; renderMe();
+    if (!shown) { $('#loading').hidden = true; go(startTab); }
   } catch (err) {
     console.error(err);
+    if (shown) return;
     $('#loading').innerHTML = `無法載入：${esc(err.message)}<br><br><a class="btn btn-ghost" href="./?book">改用網頁預約</a>`;
   }
 })();

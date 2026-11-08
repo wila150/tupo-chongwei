@@ -70,15 +70,21 @@ function card(title, lines, color = '#d7262e') {
 }
 
 /* ---------- 驗證 LIFF 的 ID token ---------- */
+const tokenCache = new Map(); // 同一個 token 在有效期內不用每次都問 LINE（省一趟網路）
 async function verifyLine(idToken) {
   if (!idToken) throw httpErr(401, '請從 LINE 開啟');
+  const hit = tokenCache.get(idToken);
+  if (hit && hit.exp > Date.now()) return hit.me;
   const r = await fetch('https://api.line.me/oauth2/v2.1/verify', {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ id_token: idToken, client_id: process.env.LINE_LOGIN_CHANNEL_ID })
   });
   const j = await r.json();
   if (!r.ok || !j.sub) throw httpErr(401, '登入已過期，請重新開啟');
-  return { uid: j.sub, name: j.name || '' };
+  const me = { uid: j.sub, name: j.name || '' };
+  if (tokenCache.size > 500) tokenCache.clear();
+  tokenCache.set(idToken, { me, exp: Math.min((j.exp || 0) * 1000, Date.now() + 30 * 60e3) });
+  return me;
 }
 const httpErr = (code, msg) => Object.assign(new Error(msg), { code });
 
@@ -133,20 +139,23 @@ export const api = onRequest({ invoker: 'public', cors: [SITE, 'https://tupo-cho
   try {
     if (req.method !== 'POST') throw httpErr(405, 'POST only');
     const { action, idToken } = req.body || {};
+    if (action === 'ping') return res.json({ ok: true }); // 學員 App 打開時先叫醒（冷啟動）
     const me = await verifyLine(idToken);
     let st = await studentByLine(me.uid);
 
     if (action === 'me') {
       if (!st) return res.json({ bound: false, lineName: me.name });
       const today = twYmd(twNow());
-      const les = await db.collection('lessons').where('studentIds', 'array-contains', st.id).get();
+      const [les, led, pq] = await Promise.all([
+        db.collection('lessons').where('studentIds', 'array-contains', st.id).get(),
+        st.ref.collection('ledger').orderBy('at', 'desc').limit(30).get(),
+        db.collection('bookings').where('lineUserId', '==', me.uid).get()
+      ]);
       const lessons = les.docs.map(d => ({ id: d.id, ...d.data() }))
         .filter(l => l.date >= today && l.status === 'scheduled')
         .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
         .map(l => ({ id: l.id, date: l.date, time: l.time, minutes: l.minutes || 60, paid: !!l.paid, canCancel: slotMs(l.date, l.time) - Date.now() > CANCEL_HOURS * 3600e3 && !!l.paid }));
-      const led = await st.ref.collection('ledger').orderBy('at', 'desc').limit(30).get();
       const ledger = led.docs.map(d => { const x = d.data(); return { note: x.note || x.type, delta: x.delta || 0, at: x.at?.toMillis?.() || 0 }; });
-      const pq = await db.collection('bookings').where('lineUserId', '==', me.uid).get();
       const pending = pq.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.status === 'pending' && b.date >= today)
         .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).map(b => ({ id: b.id, date: b.date, time: b.time }));
       return res.json({ bound: true, student: { name: st.name, credits: st.credits || 0, expiresAt: st.expiresAt || null, blocked: !!st.blocked, prospect: !!st.prospect }, lessons, pending, ledger, cancelHours: CANCEL_HOURS });
