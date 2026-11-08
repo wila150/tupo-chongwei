@@ -100,7 +100,7 @@ h2 small { display: block; font-size: 1rem; font-weight: 500; color: var(--muted
 .class-place::before { content: '📍 '; }
 
 /* gallery */
-.gallery { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem; margin-top: 3rem; }
+.gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 3rem; }
 .gallery .photo-slot { aspect-ratio: 4/3; }
 
 /* booking */
@@ -178,8 +178,6 @@ details p { color: var(--muted); margin-top: .6rem; }
   .about-photo { aspect-ratio: 1; }
   .schedule, .row { grid-template-columns: 1fr; }
   .cards-3, .cards-6 { grid-template-columns: repeat(2, 1fr); }
-  .gallery { grid-template-columns: 1fr 1fr; }
-  .gallery .photo-slot:first-child { grid-column: span 2; }
   .hero-tags { display: none; }
   .hero-art { width: 100%; height: 60%; bottom: auto; opacity: .45; }
   .hero-art img { -webkit-mask-image: linear-gradient(0deg, transparent 0%, #000 50%); mask-image: linear-gradient(0deg, transparent 0%, #000 50%); }
@@ -288,8 +286,15 @@ details p { color: var(--muted); margin-top: .6rem; }
 .reel { border-radius: 16px; overflow: hidden; background: var(--ink-2); border: 1px solid #2a2a2a; transition: transform .25s, border-color .25s; }
 .reel:hover { border-color: #444; }
 .reel-frame { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: #000; }
-.reel-frame iframe { position: absolute; left: 0; top: -54px; width: 100%; height: calc(100% + 54px + 220px); border: 0; }
+.reel-clip { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); height: 100%; overflow: hidden; transition: height .2s; }
+.reel-clip iframe { position: absolute; left: 0; top: -54px; width: 100%; height: calc(100% + 54px + 260px); border: 0; }
 .reel-link { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1rem; font-weight: 700; font-size: .92rem; color: var(--paper); text-decoration: none; }
 .reel-link span { color: var(--muted); }
 .reel-link:hover { color: var(--red); }
-.reel-frame:not(.reel-cover)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: #000; pointer-events: none; }
+.reel-clip::before, .reel-clip::after { content: ''; position: absolute; z-index: 1; left: 0; right: 0; height: 2px; background: #000; pointer-events: none; }
+.reel-clip::before { top: 0; } .reel-clip::after { bottom: 0; height: 3px; }
+@media (max-width: 760px) {
+  .gallery { display: flex; gap: .8rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-right: -4vw; padding-right: 4vw; }
+  .gallery::-webkit-scrollbar { display: none; }
+  .gallery .photo-slot { flex: 0 0 82%; scroll-snap-align: start; }
+}

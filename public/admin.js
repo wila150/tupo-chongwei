@@ -267,7 +267,7 @@ $('#saveContent').addEventListener('click', async () => {
 /* ---------- 照片：每個固定位置是一本相簿 → Storage photos/albums/<位置>/*.webp，清單 site/config.albums.<位置>（第一張是封面） ---------- */
 const SLOTS = [
   { id: 'coach', name: '教練照片', where: '「關於教練」', max: 1600 },
-  { id: 'g1', name: '訓練照片 1', where: '私人課區（大張）', max: 1600 },
+  { id: 'g1', name: '訓練照片 1', where: '私人課區', max: 1600 },
   { id: 'g2', name: '訓練照片 2', where: '私人課區', max: 1600 },
   { id: 'g3', name: '訓練照片 3', where: '私人課區', max: 1600 },
   { id: 'hero', name: '首頁背景', where: '首頁最上方（會壓暗，只用一張）', max: 1920, single: true }
