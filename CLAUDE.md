@@ -24,3 +24,5 @@
 - `functions/`（Node 22、asia-east1）：`api`（學員 App，用 LIFF ID token 向 LINE 驗證）、`lineWebhook`（「通知綁定 密碼」加入 `notify/config.lineUserIds`、「取消通知」、「查堂數」）、`onBookingCreated`（新預約通知）。設定在 `functions/.env`（不進 git）。部署：`firebase deploy --only functions`（第一次要先給 compute SA `roles/cloudbuild.builds.builder`）
 - 自動推播：`nightlyReminder` 每天 20:00（台灣）推明天的課提醒卡（✅準時到／🙋請假 postback → lessons.attend.{sid}，請假會通知管理員）並傳明日課表給管理員；`onLessonDone` 教練完課扣堂（非 paid）→ 傳剩餘堂數給學員
 - LINE 記住客人：學員 App 第一次留姓名＋手機 → `rememberLineUser`（電話對到舊學員就綁定，否則建 `prospect: true`、0 堂的新客人）；網站/LIFF 預約有 lineUserId 也會自動記住。0 堂的人在 App 按「申請預約」→ api `request` 建 pending booking（走預約單確認流程），我的課顯示待確認
+
+- Storage 規則要讀 Firestore admins：Storage 服務帳號需要 roles/firebaserules.firestoreServiceAgent（2026-11-08 已加，少了會全部上傳失敗）
