@@ -290,7 +290,7 @@ async function loadPhotos() {
 }
 
 function renderSlot(id) {
-  if (id === 'hero') setTimeout(drawHb);
+  if (id === 'hero') setTimeout(() => { const f = $('#hbFrame'); if (f?.src) f.src = '/?heroPreview=1&t=' + Date.now(); drawHb(); });
   const s = SLOTS.find(x => x.id === id), card = $(`.ph[data-slot="${id}"]`), list = albums[id] || [];
   const open = card.classList.contains('open');
   card.innerHTML = `
@@ -691,17 +691,29 @@ const HB0 = { url: '', x: 50, y: 100, zoom: 100, dim: 50 }, HA0 = { x: 50, y: 50
 let heroBg = { ...HB0 }, heroArt = { ...HA0 }, hbWhich = 'art', hbT = null;
 const hbCur = () => hbWhich === 'art' ? heroArt : heroBg;
 function setVars(el, o) { el.style.setProperty('--x', o.x + '%'); el.style.setProperty('--y', o.y + '%'); el.style.setProperty('--z', o.zoom / 100); if (o.dim != null) el.style.setProperty('--o', o.dim / 100); }
+// 預覽＝真正的首頁（iframe），用這台電腦螢幕的寬高縮小顯示，所以跟網站上看到的一樣
+const HBV = { w: Math.max(1280, Math.min(screen.availWidth || 1440, 2560)), h: 0 };
+HBV.h = Math.max(700, Math.min((screen.availHeight || 900) - 130, HBV.w * .75));
+function hbLayout() {
+  const pv = $('#hbPrev'), fr = $('#hbFrame'); if (!pv || !pv.clientWidth) return 0;
+  const k = pv.clientWidth / HBV.w;
+  pv.style.height = HBV.h * k + 'px';
+  fr.style.width = HBV.w + 'px'; fr.style.height = HBV.h + 'px'; fr.style.transform = `scale(${k})`;
+  $('#hbArtBox').style.width = Math.min(HBV.w * .55, 860) * k + 'px';
+  return k;
+}
 function drawHb() {
-  const im = $('#hbImg'); if (!im) return;
-  const src = heroBg.url || 'img/bear-hero.webp'; if (im.getAttribute('src') !== src) im.src = src;
-  setVars(im, heroBg);
-  const art = $('#hbArt'), a = (albums.hero || [])[0]?.url || legacyPhotos.hero || '';
-  if (a && art.getAttribute('src') !== a) art.src = a; art.hidden = !a; setVars(art, heroArt);
+  const fr = $('#hbFrame'); if (!fr) return;
+  if (!fr.src) { fr.src = '/?heroPreview=1'; fr.addEventListener('load', () => setTimeout(drawHb, 300)); }
+  hbLayout();
+  fr.contentWindow?.postMessage({ type: 'heroPreview', heroArt, heroBg }, location.origin);
   const c = hbCur(); $('#hbX').value = c.x; $('#hbY').value = c.y; $('#hbZ').value = c.zoom; $('#hbD').value = heroBg.dim;
   $('#hbDL').hidden = hbWhich === 'art'; $('#hbPrev').classList.toggle('edit-art', hbWhich === 'art');
   $('#hbBear').hidden = !heroBg.url;
-  if (hbWhich === 'art' && !a) $('#hbMsg').textContent = '還沒上傳「首頁主圖」，先到上面照片區上傳';
+  const a = (albums.hero || [])[0]?.url || legacyPhotos.hero || '';
+  if (!a) $('#hbMsg').textContent = '還沒上傳「首頁主圖」，先到上面照片區上傳（預覽要重新整理才會出現）';
 }
+addEventListener('resize', () => hbLayout());
 function saveHb(now) {
   clearTimeout(hbT); $('#hbMsg').textContent = '儲存中…';
   hbT = setTimeout(() => F.setDoc(F.doc(db, 'site', 'config'), { heroBg, heroArt }, { merge: true })
@@ -716,12 +728,13 @@ $('#hbBear').addEventListener('click', () => { heroBg.url = ''; drawHb(); saveHb
 $('#hbReset').addEventListener('click', () => { if (hbWhich === 'art') heroArt = { ...HA0 }; else heroBg = { ...HB0, url: heroBg.url }; drawHb(); saveHb(true); });
 // 在預覽上拖曳：往右拖＝圖往右移
 (() => {
-  const pv = $('#hbPrev'); let st = null;
+  const pv = $('#hbDrag'); let st = null;
   pv.addEventListener('pointerdown', e => { const c = hbCur(); st = { px: e.clientX, py: e.clientY, x: c.x, y: c.y }; pv.setPointerCapture(e.pointerId); });
   pv.addEventListener('pointermove', e => {
-    if (!st) return; const c = hbCur(), r = (hbWhich === 'art' ? $('.hb-main') : pv).getBoundingClientRect(), k = 100 / (c.zoom / 100);
-    c.x = Math.round(Math.min(100, Math.max(0, st.x - (e.clientX - st.px) / r.width * k)));
-    c.y = Math.round(Math.min(100, Math.max(0, st.y - (e.clientY - st.py) / r.height * k)));
+    if (!st) return; const c = hbCur(), k = hbLayout(), z = c.zoom / 100;
+    const w = (hbWhich === 'art' ? Math.min(HBV.w * .55, 860) : HBV.w) * k, h = HBV.h * k;
+    c.x = Math.round(Math.min(100, Math.max(0, st.x - (e.clientX - st.px) / w * 100 / z)));
+    c.y = Math.round(Math.min(100, Math.max(0, st.y - (e.clientY - st.py) / h * 100 / z)));
     drawHb();
   });
   const end = () => { if (st) { st = null; saveHb(); } };

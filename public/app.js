@@ -97,15 +97,9 @@ $$('.photo-slot[data-photo]').forEach(el => {
     img.onload = () => {
       el.dataset.cover = '1'; el.style.setProperty('--photo', 'none'); el.classList.add('has-photo', 'bear-bg');
       // 背景（預設是熊）：後台「首頁背景」可換圖、調左右/上下/放大/亮度 → site/config.heroBg
-      const hb = S.heroBg || {}, bg = document.createElement('img');
-      bg.className = 'hero-bear'; bg.alt = ''; bg.src = hb.url || 'img/bear-hero.webp';
-      bg.style.setProperty('--x', (hb.x ?? 50) + '%'); bg.style.setProperty('--y', (hb.y ?? 100) + '%');
-      bg.style.setProperty('--z', (hb.zoom ?? 100) / 100); bg.style.setProperty('--o', (hb.dim ?? 50) / 100);
-      el.appendChild(bg);
+      const bg = document.createElement('img'); bg.className = 'hero-bear'; bg.alt = ''; el.appendChild(bg);
       const art = document.querySelector('.hero-art img'); art.src = cover; art.closest('.hero-art').classList.add('is-photo');
-      const ha = S.heroArt || {}; // 後台調整的主圖位置
-      art.style.objectPosition = `${ha.x ?? 50}% ${ha.y ?? 50}%`; art.style.transformOrigin = art.style.objectPosition;
-      if ((ha.zoom ?? 100) > 100) art.style.transform = `scale(${ha.zoom / 100})`;
+      applyHero();
     };
     img.src = cover;
   } else if (cover) {
@@ -149,6 +143,26 @@ function slotSlideshow(el, urls) {
     load(layers[(i + 1) % layers.length]);
   }, 7000), delay);
 }
+
+/* 首頁主圖／背景位置（site/config.heroArt、heroBg）；後台預覽用 postMessage 即時套用 */
+function applyHero() {
+  const hb = S.heroBg || {}, ha = S.heroArt || {};
+  const bg = document.querySelector('.hero-bear');
+  if (bg) {
+    const src = hb.url || 'img/bear-hero.webp'; if (bg.getAttribute('src') !== src) bg.src = src;
+    bg.style.setProperty('--x', (hb.x ?? 50) + '%'); bg.style.setProperty('--y', (hb.y ?? 100) + '%');
+    bg.style.setProperty('--z', (hb.zoom ?? 100) / 100); bg.style.setProperty('--o', (hb.dim ?? 50) / 100);
+  }
+  const art = document.querySelector('.hero-art.is-photo img');
+  if (art) {
+    art.style.objectPosition = `${ha.x ?? 50}% ${ha.y ?? 50}%`; art.style.transformOrigin = art.style.objectPosition;
+    art.style.transform = (ha.zoom ?? 100) > 100 ? `scale(${ha.zoom / 100})` : '';
+  }
+}
+addEventListener('message', e => {
+  if (e.origin !== location.origin || e.data?.type !== 'heroPreview') return;
+  S.heroArt = e.data.heroArt; S.heroBg = e.data.heroBg; applyHero();
+});
 
 /* ---------- schedule ---------- */
 const order = d => (d + 6) % 7; // Monday first

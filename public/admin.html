@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="theme-color" content="#0e0e0e">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611081648">
+  <link rel="stylesheet" href="styles.css?v=202611081653">
   <style>
     body { padding: 0; }
     [hidden] { display: none !important; }
@@ -242,16 +242,12 @@
     .mp-foot { display: flex; align-items: center; gap: .8rem; justify-content: flex-end; }
     .hb { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1.2rem; align-items: start; }
     @media (max-width: 760px) { .hb { grid-template-columns: 1fr; } }
-    .hb-prev { position: relative; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: var(--ink); cursor: grab; touch-action: none; user-select: none; }
-    .hb-prev:active { cursor: grabbing; }
-    .hb-prev img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--x) var(--y); transform: scale(var(--z)); transform-origin: var(--x) var(--y); opacity: var(--o); pointer-events: none; }
-    .hb-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,14,14,.95) 25%, rgba(14,14,14,.55) 65%, rgba(14,14,14,.3)), linear-gradient(0deg, var(--ink), transparent 30%); pointer-events: none; }
-    .hb-main { position: absolute; top: 0; right: 0; bottom: 0; width: 55%; overflow: hidden; pointer-events: none; }
-    .hb-main img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--x) var(--y); transform: scale(var(--z)); transform-origin: var(--x) var(--y);
-      -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%), linear-gradient(0deg, transparent 0%, #000 18%); -webkit-mask-composite: source-in; mask-image: linear-gradient(90deg, transparent 0%, #000 14%), linear-gradient(0deg, transparent 0%, #000 18%); mask-composite: intersect; }
-    .hb-prev.edit-art .hb-main { outline: 2px dashed rgba(225,29,42,.8); outline-offset: -2px; }
-    .hb-title { position: absolute; left: 7%; top: 40%; font-weight: 900; font-size: clamp(1rem, 3vw, 1.8rem); pointer-events: none; }
-    .hb-title em { color: var(--red); font-style: normal; }
+    .hb-prev { position: relative; border-radius: 12px; overflow: hidden; background: var(--ink); border: 1px solid #333; }
+    .hb-prev iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
+    .hb-drag { position: absolute; inset: 0; cursor: grab; touch-action: none; user-select: none; }
+    .hb-drag:active { cursor: grabbing; }
+    .hb-art-box { position: absolute; top: 0; right: 0; bottom: 0; border: 2px dashed rgba(225,29,42,.85); pointer-events: none; display: none; }
+    .hb-prev.edit-art .hb-art-box { display: block; }
     .hb-ctl { display: grid; gap: .7rem; }
     .hb-ctl label { display: grid; grid-template-columns: 3rem 1fr; align-items: center; gap: .6rem; font-size: .9rem; color: var(--muted); }
     .hb-ctl input[type=range] { width: 100%; accent-color: var(--red); }
@@ -481,7 +477,7 @@
         <p class="hint">先選要調整「主圖」（上面「首頁主圖」上傳的照片）還是「背景」（預設是熊，可以從媒體庫換別張），再在預覽圖上<b>直接拖曳</b>或用滑桿調整，<b>改了馬上生效</b>。手機上背景會自動再淡一點。</p>
         <div class="tabs" id="hbWhich"><button type="button" data-w="art" class="active">主圖（紅衣服那張）</button><button type="button" data-w="bg">背景（熊）</button></div>
         <div class="hb">
-          <div class="hb-prev" id="hbPrev"><img id="hbImg" alt="" draggable="false"><div class="hb-shade"></div><div class="hb-main"><img id="hbArt" alt="" draggable="false"></div><div class="hb-title">突破<em>重圍</em></div></div>
+          <div class="hb-prev" id="hbPrev"><iframe id="hbFrame" title="首頁預覽" scrolling="no" tabindex="-1"></iframe><div class="hb-drag" id="hbDrag"></div><div class="hb-art-box" id="hbArtBox"></div></div>
           <div class="hb-ctl">
             <label>左右<input type="range" id="hbX" min="0" max="100"></label>
             <label>上下<input type="range" id="hbY" min="0" max="100"></label>
@@ -499,7 +495,7 @@
   </div>
 
   <p id="noConfig" class="empty" hidden>Firebase 尚未設定（firebase-config.js）。</p>
-  <script src="data.js?v=202611081648"></script>
-  <script type="module" src="admin.js?v=202611081648"></script>
+  <script src="data.js?v=202611081653"></script>
+  <script type="module" src="admin.js?v=202611081653"></script>
 </body>
 </html>

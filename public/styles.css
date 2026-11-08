@@ -328,3 +328,10 @@ a.reel-frame:hover .reel-clip { filter: brightness(1.12); }
   .hero-art.is-photo img { -webkit-mask-image: linear-gradient(0deg, transparent 0%, #000 45%); mask-image: linear-gradient(0deg, transparent 0%, #000 45%); }
   .hero-art.is-photo ~ .hero-inner h1, .hero-art.is-photo ~ .hero-inner p { text-shadow: 0 2px 12px rgba(0,0,0,.85); }
 }
+/* 熊（手套）不要透過主圖：主圖不再做透明淡出，改成上面蓋一層漸層到底色（左邊只留一點點透明接縫） */
+.hero-art.is-photo img { -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 5%); mask-image: linear-gradient(90deg, transparent 0%, #000 5%); }
+.hero-art.is-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, var(--ink) 0%, rgba(14,14,14,0) 22%); pointer-events: none; }
+@media (max-width: 760px) {
+  .hero-art.is-photo img { -webkit-mask-image: none; mask-image: none; }
+  .hero-art.is-photo::after { background: linear-gradient(0deg, var(--ink) 0%, rgba(14,14,14,.6) 35%, rgba(14,14,14,0) 70%); }
+}
