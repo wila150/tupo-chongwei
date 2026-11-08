@@ -260,7 +260,8 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
       if (ev.type === 'postback') { await onPostback(ev); continue; }
       if (ev.type !== 'message' || ev.message.type !== 'text') continue;
       const t = ev.message.text.trim(), uid = ev.source.userId;
-      const m = /^通知綁定\s*(\S+)$/.exec(t);
+      // 「通知綁定 密碼」或只傳密碼本身都可以
+      const m = /^通知綁定\s*(\S+)$/.exec(t) || (process.env.NOTIFY_CODE && t === process.env.NOTIFY_CODE ? [t, t] : null);
       if (m) {
         if (m[1] !== process.env.NOTIFY_CODE) { await reply(ev.replyToken, [text('密碼不對喔')]); continue; }
         await db.doc('notify/config').set({ lineUserIds: FieldValue.arrayUnion(uid) }, { merge: true });
