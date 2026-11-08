@@ -1,7 +1,8 @@
 // IG 影片輪播（首頁「訓練影片」＋相簿頁共用）
 // 每張卡固定同樣大小；電腦一次 3 張、平板 2 張、手機 1 張（露出下一張一點），左右滑或按箭頭換頁。
 // 有封面（後台從媒體庫選，存在 site/config.reelCovers[網址]）→ 顯示封面＋播放鍵，點了開 IG；
-// 沒封面 → 用 IG 的嵌入框，裁掉上面的帳號列（54px）和下面的按讚留言，只留影片畫面。
+// 沒封面 → 用 IG 的嵌入框當預覽圖（不能在網站上播），裁掉上面的帳號列（54px）和下面的按讚留言。
+// 不管有沒有封面，點卡片一律開 IG 觀看。
 window.renderReels = function (box, urls, covers) {
   covers = covers || {};
   var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -10,7 +11,7 @@ window.renderReels = function (box, urls, covers) {
     var c = covers[u];
     var media = c
       ? '<a class="reel-frame reel-cover" href="' + esc(u) + '" target="_blank" rel="noopener" style="background-image:url(\'' + esc(c) + '\')"><span class="reel-play"></span></a>'
-      : '<div class="reel-frame"><div class="reel-clip"><iframe src="' + esc(u) + 'embed/" loading="lazy" scrolling="no" allowtransparency="true" allow="autoplay; encrypted-media; picture-in-picture" title="IG 影片"></iframe></div></div>';
+      : '<a class="reel-frame" href="' + esc(u) + '" target="_blank" rel="noopener" aria-label="在 IG 觀看"><div class="reel-clip"><iframe src="' + esc(u) + 'embed/" loading="lazy" scrolling="no" tabindex="-1" title="IG 影片預覽"></iframe></div></a>';
     return '<div class="reel">' + media + '<a class="reel-link" href="' + esc(u) + '" target="_blank" rel="noopener">▶ 在 IG 觀看<span>↗</span></a></div>';
   }).join('') + '</div><button class="rc-nav rc-next" aria-label="下一組">›</button><div class="rc-dots"></div>';
   var track = box.querySelector('.rc-track'), dots = box.querySelector('.rc-dots');
@@ -38,22 +39,13 @@ window.renderReels = function (box, urls, covers) {
 // 用它推算這支影片的比例（4:5、1:1、16:9、1.91:1），只露出影片本身；扁的影片等比放大填滿固定大小的框（左右裁掉），每張都滿版。
 (function () {
   var RATIOS = [1.25, 1, 0.5625, 0.5236];
-  // 播放前：IG 把扁的預覽圖放在最上面 → 以頂端為基準放大
-  // 按下播放後：影片改放在 4:5 區塊正中間 → 取消放大、原尺寸置中（點進 iframe 時視窗會 blur，用它判斷）
+  // 一律到 IG 觀看：iframe 只當預覽圖（不能點），整張卡是連結；扁的影片以頂端為基準放大填滿
   function fit(f) {
     var k = +f.dataset.k || 1;
+    f.style.transformOrigin = '50% 0';
     f.style.transform = k > 1.01 ? 'scale(' + k + ')' : '';
-    if (f.dataset.playing) { f.style.transform = ''; f.style.top = '-54px'; } // 播放中：原尺寸置中（上下黑邊），IG 的按鈕文字不會被放大
-    else { f.style.transformOrigin = '50% 0'; f.style.top = (-54 * k) + 'px'; }
+    f.style.top = (-54 * k) + 'px';
   }
-  // 已經點過一支後，焦點留在那支的 iframe 裡，再點下一支時主視窗不會再 blur → 另外每 0.3 秒檢查目前焦點在哪支
-  function check() {
-    var a = document.activeElement;
-    if (a && a.tagName === 'IFRAME' && a.closest('.reel-clip') && !a.dataset.playing) { a.dataset.playing = '1'; fit(a); }
-  }
-  addEventListener('blur', function () { setTimeout(check, 0); });
-  setInterval(check, 300);
-  addEventListener('resize', function () { Array.prototype.forEach.call(document.querySelectorAll('.reel-clip iframe[data-k]'), fit); });
   addEventListener('message', function (e) {
     if (!/instagram\.com$/.test(new URL(e.origin).hostname)) return;
     var d = e.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (x) { return; } }

@@ -306,3 +306,6 @@ details p { color: var(--muted); margin-top: .6rem; }
 .slot-dots { position: absolute; top: .8rem; left: .9rem; z-index: 1; display: flex; gap: .3rem; }
 .slot-dots i { width: 6px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.45); transition: width .3s, background .3s; }
 .slot-dots i.on { width: 16px; background: #fff; }
+.reel-clip iframe { pointer-events: none; }
+a.reel-frame { display: block; cursor: pointer; }
+a.reel-frame:hover .reel-clip { filter: brightness(1.12); }
