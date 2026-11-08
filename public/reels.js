@@ -38,6 +38,21 @@ window.renderReels = function (box, urls, covers) {
 // 用它推算這支影片的比例（4:5、1:1、16:9、1.91:1），只露出影片本身；扁的影片等比放大填滿固定大小的框（左右裁掉），每張都滿版。
 (function () {
   var RATIOS = [1.25, 1, 0.5625, 0.5236];
+  // 播放前：IG 把扁的預覽圖放在最上面 → 以頂端為基準放大
+  // 按下播放後：影片改放在 4:5 區塊正中間 → 取消放大、原尺寸置中（點進 iframe 時視窗會 blur，用它判斷）
+  function fit(f) {
+    var k = +f.dataset.k || 1;
+    f.style.transform = k > 1.01 ? 'scale(' + k + ')' : '';
+    if (f.dataset.playing) { f.style.transform = ''; f.style.top = '-54px'; } // 播放中：原尺寸置中（上下黑邊），IG 的按鈕文字不會被放大
+    else { f.style.transformOrigin = '50% 0'; f.style.top = (-54 * k) + 'px'; }
+  }
+  addEventListener('blur', function () {
+    setTimeout(function () {
+      var a = document.activeElement;
+      if (a && a.tagName === 'IFRAME' && a.closest('.reel-clip') && !a.dataset.playing) { a.dataset.playing = '1'; fit(a); }
+    }, 0);
+  });
+  addEventListener('resize', function () { Array.prototype.forEach.call(document.querySelectorAll('.reel-clip iframe[data-k]'), fit); });
   addEventListener('message', function (e) {
     if (!/instagram\.com$/.test(new URL(e.origin).hostname)) return;
     var d = e.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (x) { return; } }
@@ -49,8 +64,7 @@ window.renderReels = function (box, urls, covers) {
     // 扁的影片放大到填滿框（左右裁掉），每張卡都滿版
     var k = 1.25 / Math.min(r, 1.25);
     f.style.height = d.details.height + 'px';
-    f.style.transformOrigin = '50% 0';
-    f.style.transform = k > 1.01 ? 'scale(' + k + ')' : '';
-    f.style.top = (-54 * k) + 'px';
+    f.dataset.k = k;
+    fit(f);
   });
 })();
