@@ -211,9 +211,10 @@ if (S.contact.liffId && (/[?&]book\b/.test(location.search) || /liff\.state|liff
 
 /* ---------- booking ---------- */
 const quick = $('#quickLine');
-// 在 LINE 裡打開同一份預約表單（LIFF → /?book），送出後預約單直接傳到客人的 LINE
-if (S.contact.liffId) quick.href = `https://liff.line.me/${S.contact.liffId}`;
-else if (S.contact.lineOA) quick.href = `https://line.me/R/oaMessage/${S.contact.lineOA}/?${encodeURIComponent('教練你好，我想預約私人課 🥊\n想上課的時間：\n想練的項目：')}`;
+// 立即預約：帶到下面的表單（不用登入 LINE）；送出後會自動跳到 LINE，把預約單傳給教練
+quick.removeAttribute('target'); quick.href = '#bookingForm';
+quick.addEventListener('click', e => { e.preventDefault(); $('#bookingForm').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+if (!S.contact.lineOA) quick.closest('p').remove();
 else quick.closest('p').remove();
 const B = S.booking;
 const form = $('#bookingForm');
@@ -342,13 +343,19 @@ form.addEventListener('submit', async e => {
         ${data.id ? `<p class="rc-id">預約編號 ${esc(data.id.slice(0, 8).toUpperCase())}</p>` : ''}
       </div>`;
     $('#doneSummary').textContent = '教練確認後會盡快聯絡你。想更快？直接傳 LINE 跟教練說一聲。';
-    const msg = `教練你好，我在網站預約了私人課：\n${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time}\n${data.name} ${data.phone}`;
-    const oa = lineProfile ? null : S.contact.lineOA; // 從 LINE 預約的人，伺服器會直接把預約單傳到他的 LINE
+    const dd = `${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()].replace('週', '')}）`;
+    const msg = ['教練你好，我在網站預約了私人課 🥊', '', `📅 ${dd} ${data.time}`, `👤 ${data.name}　${data.phone}`,
+      `👥 ${data.people || 1} 人｜${data.level || ''}・${data.who || ''}`, data.goals.length ? `💪 想練：${data.goals.join('、')}` : '',
+      data.note ? `📝 備註：${data.note}` : '', data.id ? `🔖 預約編號：${data.id.slice(0, 8).toUpperCase()}` : ''].filter((x, i) => x || i === 1).join('\n');
+    const oa = lineProfile ? null : S.contact.lineOA; // 從 LINE 裡預約的人，伺服器會直接把預約單傳到他的 LINE
     $('#doneLine').hidden = !oa;
     if (lineProfile) $('#doneSummary').textContent = '這張預約單也已經傳到你的 LINE，教練確認後會再通知你。';
     if (oa) {
-      $('#lineMsg').textContent = msg;
-      $('#lineGo').href = `https://line.me/R/oaMessage/${oa}/?${encodeURIComponent(msg)}`;
+      const url = `https://line.me/R/oaMessage/${oa}/?${encodeURIComponent(msg)}`;
+      // 每筆網站預約都會自動通知教練的 LINE，客人不用再傳；想自己傳的再按（預約單文字已填好）
+      $('#doneLine').textContent = '也想用 LINE 跟教練說一聲（選填）';
+      $('#doneLine').onclick = () => { location.href = url; };
+      $('#doneSummary').textContent = '教練已經收到你的預約，確認後會用電話或 LINE 聯絡你。';
     }
     form.hidden = true; $('#bookingDone').hidden = false;
     $('#booking').scrollIntoView({ behavior: 'smooth' });
@@ -361,7 +368,7 @@ form.addEventListener('submit', async e => {
 });
 
 const modal = $('#lineModal');
-$('#doneLine').addEventListener('click', () => { modal.hidden = false; });
+// 傳 LINE 按鈕在送出後設定 onclick（直接開 LINE，不再跳說明視窗）
 modal.addEventListener('click', e => { if (e.target === modal || e.target.closest('[data-close]')) modal.hidden = true; });
 $('#lineGo').addEventListener('click', () => { modal.hidden = true; });
 addEventListener('keydown', e => { if (e.key === 'Escape') modal.hidden = true; });
