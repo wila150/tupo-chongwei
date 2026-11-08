@@ -32,6 +32,8 @@ export function initCrm({ F, db, esc, $ }) {
     return t.join(' ');
   };
   let pendingBk = [];
+  const SEEN_KEY = 'tupo_bell_seen'; // 🔔 鈴鐺：上次打開的時間、已知的預約（判斷新進來的）
+  let seen = Number(localStorage.getItem(SEEN_KEY) || 0), known = null, knownL = null;
   const IC = {
     cal: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>',
     bell: '<svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
@@ -76,6 +78,7 @@ export function initCrm({ F, db, esc, $ }) {
     lessons = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
     renderLessons(); renderHome(); syncBusy();
+    lineArrivals(lessons.filter(l => l.source === 'line' && l.status === 'scheduled').map(l => ({ id: 'l' + l.id, t: `📅 LINE 預約：${(l.studentNames || []).join('、')}`, s: `${md(l.date)} ${l.time}`, go: 'lessons' })));
   }, err => console.warn('lessons', err));
 
   /* ================= 課務扣堂 ================= */
@@ -432,7 +435,54 @@ export function initCrm({ F, db, esc, $ }) {
     renderHome();
   }
   loadRevenue();
+  function lineArrivals(list) { // 跟 newArrivals 一樣，但另外記（課表和預約是兩個來源）
+    if (!knownL) { knownL = new Set(list.map(x => x.id)); return; }
+    const fresh = list.filter(x => !knownL.has(x.id)); fresh.forEach(x => knownL.add(x.id));
+    if (fresh.length) alertNew(fresh);
+  }
+  /* ================= 🔔 通知鈴鐺：待確認預約、LINE App 預約、學員取消、漏扣 ================= */
+  const msOf = x => x?.toMillis?.() || x?._ms || 0;
+  function bellItems() {
+    const now = Date.now(), today = ymd(new Date()), since = now - 3 * 864e5;
+    const nm = l => l.studentIds.map((id, i) => byId(id)?.name || l.studentNames?.[i] || '').filter(Boolean).join('、');
+    return [
+      ...pendingBk.map(b => ({ ic: '🥊', t: `新預約待確認：${b.name}`, s: `${md(b.date)} ${b.time}・${b.source === 'line-app' ? 'LINE 申請' : '網站'}`, go: 'bookings', at: msOf(b.createdAt), urgent: true })),
+      ...lessons.filter(l => l.source === 'line' && l.status === 'scheduled' && msOf(l.createdAt) > since).map(l => ({ ic: '📅', t: `LINE 預約（已扣堂）：${nm(l)}`, s: `${md(l.date)} ${l.time}`, go: 'lessons', at: msOf(l.createdAt) })),
+      ...lessons.filter(l => l.status === 'cancelled' && l.cancelledBy === 'student' && l.date >= today).map(l => ({ ic: '↩️', t: `學員取消：${nm(l)}`, s: `${md(l.date)} ${l.time}・已退回 1 堂`, go: 'lessons', at: 0 })),
+      ...lessons.filter(l => l.status === 'scheduled' && l.kind !== 'block' && endMs(l) < now).map(l => ({ ic: '⚠️', t: `還沒扣堂：${nm(l) || '未指定學員'}`, s: `${md(l.date)} ${l.time}`, go: 'lessons', at: 0, urgent: true }))
+    ].sort((a, b) => (b.at || 0) - (a.at || 0));
+  }
+  function renderBell() {
+    const items = bellItems();
+    const n = items.filter(i => i.urgent || i.at > seen).length;
+    const el = $('#bellN'); el.hidden = !n; el.textContent = n > 99 ? '99+' : n;
+    document.title = (n ? `(${n}) ` : '') + '教練後台｜突破重圍';
+    $('#bellList').innerHTML = items.map(i => `<div class="bell-i ${i.at > seen ? 'new' : ''}" data-goto="${i.go}"><span class="bi-ic">${i.ic}</span><div><b>${esc(i.t)}</b><small>${esc(i.s)}</small></div></div>`).join('') || '<div class="bell-empty">目前沒有新通知 👍</div>';
+    $('#bellNotify').hidden = !('Notification' in window) || Notification.permission !== 'default';
+  }
+  // 新進來的預約：跳提示＋叮一聲（切到別的分頁時用桌面通知）
+  function newArrivals(list) {
+    if (!known) { known = new Set(list.map(x => x.id)); return; }
+    const fresh = list.filter(x => !known.has(x.id)); fresh.forEach(x => known.add(x.id));
+    if (fresh.length) alertNew(fresh);
+  }
+  function alertNew(fresh) {
+    const f = fresh[0], msg = `${f.t}　${f.s}${fresh.length > 1 ? `（還有 ${fresh.length - 1} 筆）` : ''}`;
+    try { const ac = new (window.AudioContext || window.webkitAudioContext)(); [0, .18].forEach((t, i) => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = i ? 1320 : 880; g.gain.setValueAtTime(.18, ac.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + t + .35); o.connect(g).connect(ac.destination); o.start(ac.currentTime + t); o.stop(ac.currentTime + t + .4); }); } catch {}
+    if ('Notification' in window && Notification.permission === 'granted' && document.hidden) { const nt = new Notification('突破重圍・教練後台', { body: msg, icon: '/img/icon-192.png' }); nt.onclick = () => { focus(); nt.close(); }; }
+    const t = document.createElement('div'); t.className = 'bell-toast'; t.textContent = '🔔 ' + msg; t.dataset.goto = f.go; document.body.appendChild(t);
+    setTimeout(() => t.remove(), 6000);
+    const bb = $('#bellBtn'); bb.classList.remove('ring'); void bb.offsetWidth; bb.classList.add('ring');
+  }
+  $('#bellBtn').addEventListener('click', e => {
+    e.stopPropagation(); const pop = $('#bellPop'); pop.hidden = !pop.hidden;
+    if (!pop.hidden) { renderBell(); seen = Date.now(); localStorage.setItem(SEEN_KEY, seen); setTimeout(renderBell, 1500); }
+  });
+  $('#bellNotify').addEventListener('click', async e => { e.stopPropagation(); await Notification.requestPermission(); renderBell(); });
+  document.addEventListener('click', e => { if (!e.target.closest('.bell-wrap')) $('#bellPop').hidden = true; else if (e.target.closest('.bell-i')) $('#bellPop').hidden = true; });
+
   function renderHome() {
+    renderBell();
     if (!$('#homeKpis')) return;
     const now = Date.now(), today = todayStr();
     const todayL = lessons.filter(l => l.date === today && l.status !== 'cancelled');
@@ -472,7 +522,7 @@ export function initCrm({ F, db, esc, $ }) {
 
   return {
     renderReport, renderHome,
-    setPending(list) { pendingBk = list; renderHome(); },
+    setPending(list) { newArrivals(list.map(b => ({ id: 'b' + b.id, t: `🥊 新預約：${b.name}`, s: `${md(b.date)} ${b.time}`, go: 'bookings' }))); pendingBk = list; renderHome(); },
     flag(phone) {
       const p = normPhone(phone); const st = p && students.find(x => normPhone(x.phone) === p);
       if (!st) return '';

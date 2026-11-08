@@ -45,3 +45,4 @@
 - 網站預約送出後顯示預約單（#receipt），樣式/欄位跟 LINE bookingCard 一樣，附預約編號
 - 網站「立即預約（LINE）」→ https://liff.line.me/<liffId>（在 LINE 開同一份表單 /?book，預約單傳到客人 LINE）；沒 liffId 才退回 oaMessage
 - 網站預約完成＝「預約成功！」＋預約單，不強制跳 LINE（教練靠 onBookingCreated 收 LINE 通知）；「也想用 LINE 跟教練說一聲（選填）」開 oaMessage 預填完整預約單；「立即預約」只捲到表單
+- 後台🔔鈴鐺（admin-crm.js renderBell/newArrivals/lineArrivals/alertNew）：待確認預約、3 天內 LINE App 預約、學員取消、漏扣；新預約跳提示＋叮聲＋（允許時）桌面通知；分頁標題顯示未處理數；已讀時間存 localStorage tupo_bell_seen

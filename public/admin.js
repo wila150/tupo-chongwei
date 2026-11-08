@@ -39,6 +39,7 @@ async function startCrm() {
   if (crm) return;
   const { initCrm } = await import(`./admin-crm.js${new URL(import.meta.url).search}`);
   crm = initCrm({ F, db, esc, $ });
+  render(); // 讓鈴鐺先記住目前的預約，之後新進來的才會跳提醒
 }
 A.onAuthStateChanged(auth, user => {
   $('#loginView').hidden = !!user;
