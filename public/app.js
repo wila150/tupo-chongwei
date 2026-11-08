@@ -89,7 +89,15 @@ $$('.photo-slot[data-photo]').forEach(el => {
   const list = (albums[slot] || []).filter(x => x && x.url);
   const reels = (albumReels[slot] || []).filter(Boolean);
   const cover = list[0]?.url || legacyPhotos[slot];
-  if (cover) {
+  if (cover && slot === 'hero') {
+    // 首頁主圖：上傳的照片放右邊（原本熊的位置），熊改當整個背景（壓暗）
+    const img = new Image();
+    img.onload = () => {
+      el.dataset.cover = '1'; el.style.setProperty('--photo', "url('img/bear-hero.webp')"); el.classList.add('has-photo', 'bear-bg');
+      const art = document.querySelector('.hero-art img'); art.src = cover; art.closest('.hero-art').classList.add('is-photo');
+    };
+    img.src = cover;
+  } else if (cover) {
     const img = new Image();
     el.dataset.cover = '1'; // 後台照片優先，舊的檔案檢查不要覆蓋
     img.onload = () => { el.style.setProperty('--photo', `url('${cover}')`); el.classList.add('has-photo'); };

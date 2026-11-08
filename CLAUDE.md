@@ -33,3 +33,4 @@
 - IG embed 會 postMessage `MEASURE` 總高：總高 = 54 + 影片 + 130 → reels.js 推算比例（4:5/1:1/16:9/1.91:1），扁的用 transform scale 放大填滿（左右裁）。有些 Reels 嵌入不能直接播（IG 規定，多半是用了版權音樂），只會顯示「在 Instagram 觀看」
 - 首頁照片格：相簿多張時每 7 秒淡入輪播（app.js slotSlideshow，三格錯開，滑鼠移上去/看不到時暫停），左上小圓點
 - Reels 一律「到 IG 觀看」（使用者決定）：iframe 只當預覽（pointer-events:none），整張卡是 IG 連結；扁的以頂端放大填滿
+- 首頁主圖（slot hero）：上傳的照片放右邊 .hero-art（原熊位置），熊改當 .hero-bg 背景（壓暗、.bear-bg）；沒上傳＝原樣

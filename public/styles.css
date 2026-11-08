@@ -309,3 +309,8 @@ details p { color: var(--muted); margin-top: .6rem; }
 .reel-clip iframe { pointer-events: none; }
 a.reel-frame { display: block; cursor: pointer; }
 a.reel-frame:hover .reel-clip { filter: brightness(1.12); }
+
+/* 首頁上傳主圖：照片在右、熊在背景 */
+.hero-bg.bear-bg { background-position: 70% 20%; opacity: .5; }
+.hero-art.is-photo img { object-position: center; }
+@media (max-width: 760px) { .hero-bg.bear-bg { opacity: .18; } }

@@ -270,7 +270,7 @@ const SLOTS = [
   { id: 'g1', name: '訓練照片 1', where: '私人課區', max: 1600 },
   { id: 'g2', name: '訓練照片 2', where: '私人課區', max: 1600 },
   { id: 'g3', name: '訓練照片 3', where: '私人課區', max: 1600 },
-  { id: 'hero', name: '首頁背景', where: '首頁最上方（會壓暗，只用一張）', max: 1920, single: true }
+  { id: 'hero', name: '首頁主圖', where: '首頁最上方右邊（取代熊的位置，熊會變背景；只用一張）', max: 1920, single: true }
 ];
 let reelCovers = {};
 let photosLoaded = false, albums = {}, albumTitles = {}, albumDesc = {}, albumReels = {}, legacyPhotos = {};
