@@ -126,7 +126,7 @@ $('#list').addEventListener('click', async e => {
 });
 
 /* ================= 網站內容編輯 ================= */
-const TITLES = { home: '總覽', bookings: '網站預約', lessons: '課務扣堂', students: '學員', report: '報表', content: '網站內容' };
+const TITLES = { home: '總覽', bookings: '網站預約', lessons: '課務扣堂', students: '學員', report: '報表', content: '網站內容', media: '媒體庫' };
 function showView(v) {
   document.querySelectorAll('#views button').forEach(x => x.classList.toggle('active', x.dataset.v === v));
   for (const k of Object.keys(TITLES)) { const el = document.getElementById(`${k}View`); if (el) el.hidden = k !== v; }
@@ -134,6 +134,7 @@ function showView(v) {
   const d = new Date(); $('#pageSub').textContent = v === 'home' ? `${d.getMonth() + 1} 月 ${d.getDate()} 日 星期${DAY[d.getDay()]}・${greet()}，${(auth.currentUser?.displayName || '教練').split(' ')[0]}` : '';
   if (v === 'content' && !cfg) loadContent();
   if (v === 'content' && !photosLoaded) loadPhotos();
+  if (v === 'media') loadMedia();
   if (v === 'report') crm?.renderReport();
   if (v === 'home') crm?.renderHome?.();
   scrollTo(0, 0);
@@ -292,7 +293,7 @@ function renderSlot(id) {
     <div class="ph-img" style="${list[0] ? `background-image:url('${list[0].url}')` : ''}">${list[0] ? '' : '尚未上傳'}${list.length > 1 ? `<span class="cnt">📷 ${list.length} 張</span>` : ''}</div>
     <div class="ph-body"><b>${s.name}</b><small>${s.where}</small>
       ${s.single ? '' : `<input class="inp" data-title value="${esc(albumTitles[id] || '')}" placeholder="相簿名稱（例：比賽紀錄）" maxlength="20">`}
-      <div class="ph-actions"><label class="btn btn-sm">${s.single ? (list.length ? '換一張' : '上傳') : '＋ 加照片'}<input type="file" accept="image/*" ${s.single ? '' : 'multiple'} hidden></label>
+      <div class="ph-actions"><label class="btn btn-sm">${s.single ? (list.length ? '換一張' : '上傳') : '＋ 加照片'}<input type="file" accept="image/*" ${s.single ? '' : 'multiple'} hidden></label><button type="button" class="btn btn-ghost btn-sm" data-pick>從媒體庫選</button>
       ${!s.single ? `<button type="button" class="btn btn-ghost btn-sm" data-manage>${open ? '收起' : `管理相簿（${list.length} 照片・${(albumReels[id] || []).length} 影片）`}</button>` : ''}
       ${s.single && list.length ? '<button type="button" class="btn btn-ghost btn-sm" data-rmall>移除</button>' : ''}</div>
       <small class="ph-msg"></small></div>
@@ -319,7 +320,7 @@ async function compress(file, max) {
   const c = document.createElement('canvas');
   c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
   c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-  return new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error('照片轉檔失敗')), 'image/webp', 0.85));
+  return new Promise((ok, no) => c.toBlob(b => b ? ok(Object.assign(b, { w: c.width, h: c.height })) : no(new Error('照片轉檔失敗')), 'image/webp', 0.85));
 }
 
 $('#photoGrid').addEventListener('change', async e => {
@@ -350,11 +351,8 @@ $('#photoGrid').addEventListener('change', async e => {
   for (const file of files) {
     slotMsg(card, `上傳中 ${done + 1}/${files.length}…`);
     try {
-      const blob = await compress(file, s.max);
-      const path = `photos/albums/${id}/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.webp`;
-      const r = ST.ref(storage, path);
-      await ST.uploadBytes(r, blob, { contentType: 'image/webp', cacheControl: 'public, max-age=31536000' });
-      albums[id].push({ url: await ST.getDownloadURL(r), path, caption: '' });
+      const m = await uploadMedia(file, albumTitles[id] || s.name, s.max);
+      albums[id].push({ url: m.url, mediaId: m.id, caption: '' });
       done++;
     } catch (err) { slotMsg(card, '上傳失敗：' + errText(err)); }
   }
@@ -369,6 +367,13 @@ $('#photoGrid').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
   const card = b.closest('.ph'), id = card.dataset.slot, list = albums[id] || [];
   if (b.matches('[data-manage]')) { card.classList.toggle('open'); renderSlot(id); return; }
+  if (b.matches('[data-pick]')) {
+    const s = SLOTS.find(x => x.id === id);
+    const picked = await openPicker({ single: !!s.single, title: `加到「${albumTitles[id] || s.name}」` });
+    if (!picked.length) return;
+    await addToAlbum(id, picked);
+    renderSlot(id); slotMsg($(`.ph[data-slot="${id}"]`), `已加入 ${picked.length} 張 ✓`); return;
+  }
   if (b.matches('[data-addreel]')) {
     const u = normReel(card.querySelector('[data-reelurl]').value);
     if (!u) return slotMsg(card, '這不是 IG Reels 或貼文的網址');
@@ -428,3 +433,232 @@ $('#reelRows').addEventListener('click', e => {
   else return;
   renderReels(); $('#saveMsg').textContent = '有修改，記得按儲存';
 });
+
+/* ================= 媒體庫：Firestore media/{id}（url, path, name, folder, alt, w, h, size, createdAt），檔案 Storage media/<id>.webp =================
+   照片先進媒體庫，再「加到相簿」；相簿裡存 { url, mediaId, caption }，從相簿移除不會刪檔，在媒體庫刪才會真的刪。 */
+let media = null, mdFolder = '', mdSel = new Set(), mdQuery = '';
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const NONE = '__none__', UNUSED = '__unused__';
+
+async function fetchMedia() {
+  if (media) return media;
+  const snap = await F.getDocs(F.collection(db, 'media'));
+  media = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  if (!photosLoaded) await loadPhotos();
+  await migrateAlbums();
+  return media;
+}
+// 舊的相簿照片（直接存在 photos/…）登記進媒體庫，之後統一管理
+async function migrateAlbums() {
+  const changed = new Set();
+  for (const s of SLOTS) for (const g of albums[s.id] || []) {
+    if (g.mediaId || !g.url) continue;
+    const ex = media.find(m => m.url === g.url);
+    const m = ex || { id: newId(), url: g.url, path: g.path || '', name: `${s.name}.webp`, folder: albumTitles[s.id] || s.name, alt: g.caption || '', createdAt: Date.now() };
+    if (!ex) { await F.setDoc(F.doc(db, 'media', m.id), (({ id, ...x }) => x)(m)); media.unshift(m); }
+    g.mediaId = m.id; delete g.path; changed.add(s.id);
+  }
+  for (const id of changed) await saveAlbum(id).catch(() => {});
+}
+
+async function uploadMedia(file, folder = '', max = 1920) {
+  const blob = await compress(file, max);
+  const id = newId(), path = `media/${id}.webp`, r = ST.ref(storage, path);
+  await ST.uploadBytes(r, blob, { contentType: 'image/webp', cacheControl: 'public, max-age=31536000' });
+  const m = { url: await ST.getDownloadURL(r), path, name: file.name.replace(/\.[^.]+$/, ''), folder, alt: '', w: blob.w, h: blob.h, size: blob.size, createdAt: Date.now() };
+  await F.setDoc(F.doc(db, 'media', id), m);
+  if (media) media.unshift({ id, ...m });
+  return { id, ...m };
+}
+
+// 用在哪些相簿：mediaId（或網址）→ [相簿名稱]
+function usage() {
+  const u = {};
+  for (const s of SLOTS) for (const g of albums[s.id] || []) {
+    const k = g.mediaId || g.url; (u[k] = u[k] || []).push(s.single ? s.name : (albumTitles[s.id] || s.name));
+  }
+  return u;
+}
+const folders = () => [...new Set(media.map(m => m.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
+
+function filtered(folder, q) {
+  const u = usage();
+  return media.filter(m => (folder === '' || (folder === NONE ? !m.folder : folder === UNUSED ? !u[m.id] : m.folder === folder))
+    && (!q || `${m.name} ${m.alt} ${m.folder}`.toLowerCase().includes(q)));
+}
+function folderChips(cur, withUnused) {
+  const u = usage(), n = f => media.filter(m => m.folder === f).length;
+  return `<button data-f="" class="${cur === '' ? 'on' : ''}">全部<small>${media.length}</small></button>`
+    + folders().map(f => `<button data-f="${esc(f)}" class="${cur === f ? 'on' : ''}">📁 ${esc(f)}<small>${n(f)}</small></button>`).join('')
+    + (media.some(m => !m.folder) ? `<button data-f="${NONE}" class="${cur === NONE ? 'on' : ''}">未分類<small>${media.filter(m => !m.folder).length}</small></button>` : '')
+    + (withUnused ? `<button data-f="${UNUSED}" class="${cur === UNUSED ? 'on' : ''}">沒用到的<small>${media.filter(m => !u[m.id]).length}</small></button>` : '');
+}
+function tile(m, sel, u, edit) {
+  return `<div class="md-item ${sel ? 'sel' : ''}" data-id="${m.id}">
+    <div class="md-img" style="background-image:url('${m.url}')"><span class="md-ck">${sel ? '✓' : ''}</span>${u[m.id] ? `<span class="md-used" title="${esc(u[m.id].join('、'))}">使用中・${esc(u[m.id][0])}${u[m.id].length > 1 ? ` 等 ${u[m.id].length}` : ''}</span>` : ''}</div>
+    ${edit ? `<input data-alt="${m.id}" value="${esc(m.alt || '')}" placeholder="說明（選填）" maxlength="60"><div class="md-name">${esc(m.name || '')}${m.folder ? '・' + esc(m.folder) : ''}</div>` : ''}
+  </div>`;
+}
+
+async function loadMedia() {
+  if (!media) { $('#mdGrid').innerHTML = '<p class="hint">載入中…</p>'; try { await fetchMedia(); } catch (err) { $('#mdGrid').innerHTML = `<p class="hint">讀取失敗：${esc(errText(err))}</p>`; return; } }
+  renderMedia();
+}
+function renderMedia() {
+  if (!media) return;
+  if (mdFolder && mdFolder !== NONE && mdFolder !== UNUSED && !folders().includes(mdFolder)) mdFolder = '';
+  const list = filtered(mdFolder, mdQuery), u = usage();
+  const mb = media.reduce((t, m) => t + (m.size || 0), 0) / 1048576;
+  $('#mdTotal').textContent = `共 ${media.length} 張${mb ? `・${mb.toFixed(1)} MB` : ''}`;
+  const real = mdFolder && mdFolder !== NONE && mdFolder !== UNUSED;
+  $('#mdFoldersBar').innerHTML = folderChips(mdFolder, true) + (real ? `<button class="md-ren" data-ren>✎ 改資料夾名稱</button>` : '');
+  $('#mdGrid').innerHTML = list.map(m => tile(m, mdSel.has(m.id), u, true)).join('') || `<div class="empty-state" style="grid-column:1/-1"><b>${media.length ? '這裡沒有照片' : '媒體庫還是空的'}</b>${media.length ? '' : '把照片拖到上面，或按「選擇照片」'}</div>`;
+  for (const id of mdSel) if (!media.some(m => m.id === id)) mdSel.delete(id);
+  $('#mdBar').dataset.n = mdSel.size;
+  $('#mdSel').textContent = mdSel.size ? `已選 ${mdSel.size} 張` : '';
+  $('#mdAll').checked = list.length > 0 && list.every(m => mdSel.has(m.id));
+  $('#mdMoveTo').innerHTML = `<option value="">移到資料夾…</option>${folders().map(f => `<option value="f:${esc(f)}">📁 ${esc(f)}</option>`).join('')}<option value="new">＋ 新資料夾…</option><option value="none">未分類</option>`;
+  $('#mdToAlbum').innerHTML = `<option value="">加到網站相簿…</option>${SLOTS.map(s => `<option value="${s.id}">${esc(s.single ? s.name + '（換成這張）' : (albumTitles[s.id] || s.name))}</option>`).join('')}`;
+}
+
+// ---- 上傳（檔案、資料夾、拖放）----
+async function uploadBatch(entries) {
+  const imgs = entries.filter(e => /^image\//.test(e.file.type) || /\.(jpe?g|png|webp|gif|heic|heif|avif)$/i.test(e.file.name));
+  if (!imgs.length) { $('#mdStatus').textContent = '沒有可以上傳的照片'; return; }
+  if (!media) await fetchMedia();
+  const here = mdFolder && mdFolder !== NONE && mdFolder !== UNUSED ? mdFolder : '';
+  let ok = 0; const bad = [];
+  for (const [i, e] of imgs.entries()) {
+    $('#mdStatus').textContent = `上傳中 ${i + 1} / ${imgs.length}…`;
+    try { await uploadMedia(e.file, e.dir || here); ok++; } catch (err) { bad.push(e.file.name); console.warn(err); }
+    if (i % 4 === 3) renderMedia();
+  }
+  $('#mdStatus').textContent = `完成，上傳 ${ok} 張 ✓` + (bad.length ? `；${bad.length} 張失敗（${bad.slice(0, 3).join('、')}${bad.length > 3 ? '…' : ''}，iPhone 的 HEIC 請先轉 JPG）` : '');
+  const dirs = [...new Set(imgs.map(e => e.dir).filter(Boolean))];
+  if (dirs.length === 1) mdFolder = dirs[0];
+  renderMedia();
+}
+const lastDir = path => { const p = path.split('/'); return p.length > 1 ? p[p.length - 2] : ''; };
+$('#mdFiles').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; uploadBatch(f.map(file => ({ file, dir: '' }))); });
+$('#mdFolder').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; uploadBatch(f.map(file => ({ file, dir: lastDir(file.webkitRelativePath || '') }))); });
+const drop = $('#mdDrop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, () => drop.classList.remove('over')));
+drop.addEventListener('drop', async e => {
+  e.preventDefault();
+  const items = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry?.()).filter(Boolean);
+  if (!items.length) return uploadBatch([...e.dataTransfer.files].map(file => ({ file, dir: '' })));
+  $('#mdStatus').textContent = '讀取中…';
+  const out = [];
+  const walk = async (ent, dir) => {
+    if (ent.isFile) { out.push({ file: await new Promise((ok, no) => ent.file(ok, no)), dir }); return; }
+    const rd = ent.createReader(); let batch;
+    do { batch = await new Promise((ok, no) => rd.readEntries(ok, no)); for (const c of batch) await walk(c, ent.name); } while (batch.length);
+  };
+  for (const it of items) await walk(it, '');
+  uploadBatch(out);
+});
+
+// ---- 篩選、選取、批次動作 ----
+$('#mdSearch').addEventListener('input', e => { mdQuery = e.target.value.trim().toLowerCase(); renderMedia(); });
+$('#mdFoldersBar').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.ren !== undefined) {
+    const name = prompt('新的資料夾名稱', mdFolder)?.trim(); if (!name || name === mdFolder) return;
+    const list = media.filter(m => m.folder === mdFolder);
+    await Promise.all(list.map(m => F.updateDoc(F.doc(db, 'media', m.id), { folder: name }).then(() => { m.folder = name; })));
+    mdFolder = name; renderMedia(); return;
+  }
+  mdFolder = b.dataset.f; renderMedia();
+});
+$('#mdGrid').addEventListener('click', e => {
+  const it = e.target.closest('.md-item'); if (!it || e.target.matches('input')) return;
+  const id = it.dataset.id; mdSel.has(id) ? mdSel.delete(id) : mdSel.add(id); renderMedia();
+});
+$('#mdGrid').addEventListener('change', async e => {
+  const id = e.target.dataset.alt; if (!id) return;
+  const m = media.find(x => x.id === id); m.alt = e.target.value.trim();
+  await F.updateDoc(F.doc(db, 'media', id), { alt: m.alt }).then(() => { $('#mdStatus').textContent = '說明已儲存 ✓'; }).catch(err => { $('#mdStatus').textContent = '儲存失敗：' + errText(err); });
+});
+$('#mdAll').addEventListener('change', e => { const list = filtered(mdFolder, mdQuery); list.forEach(m => e.target.checked ? mdSel.add(m.id) : mdSel.delete(m.id)); renderMedia(); });
+$('#mdMoveTo').addEventListener('change', async e => {
+  const v = e.target.value; if (!v || !mdSel.size) return;
+  const folder = v === 'new' ? prompt('新資料夾名稱')?.trim() : v === 'none' ? '' : v.slice(2);
+  if (folder === undefined || (v === 'new' && !folder)) return renderMedia();
+  await Promise.all([...mdSel].map(id => F.updateDoc(F.doc(db, 'media', id), { folder }).then(() => { media.find(m => m.id === id).folder = folder; })));
+  $('#mdStatus').textContent = `已移動 ${mdSel.size} 張 ✓`; mdSel.clear(); if (folder) mdFolder = folder; renderMedia();
+});
+$('#mdToAlbum').addEventListener('change', async e => {
+  const id = e.target.value; if (!id || !mdSel.size) return;
+  const picked = media.filter(m => mdSel.has(m.id));
+  await addToAlbum(id, picked);
+  const s = SLOTS.find(x => x.id === id);
+  $('#mdStatus').textContent = `已加到「${albumTitles[id] || s.name}」✓（到 網站內容 → 照片 可以排順序）`; mdSel.clear(); renderMedia();
+});
+$('#mdDel').addEventListener('click', async () => {
+  if (!mdSel.size) return;
+  const u = usage(), used = [...mdSel].filter(id => u[id]);
+  if (!confirm(`刪除 ${mdSel.size} 張照片？${used.length ? `\n其中 ${used.length} 張正用在網站相簿，會一起從相簿拿掉。` : ''}\n刪了就救不回來。`)) return;
+  const ids = new Set(mdSel), changed = new Set();
+  for (const s of SLOTS) { const before = (albums[s.id] || []).length; albums[s.id] = (albums[s.id] || []).filter(g => !ids.has(g.mediaId)); if (albums[s.id].length !== before) changed.add(s.id); }
+  for (const id of changed) { await saveAlbum(id).catch(() => {}); renderSlot(id); }
+  for (const id of ids) {
+    const m = media.find(x => x.id === id);
+    await F.deleteDoc(F.doc(db, 'media', id)).catch(() => {});
+    if (m?.path) ST.deleteObject(ST.ref(storage, m.path)).catch(() => {});
+  }
+  media = media.filter(m => !ids.has(m.id)); mdSel.clear();
+  $('#mdStatus').textContent = `已刪除 ${ids.size} 張`; renderMedia();
+});
+
+async function addToAlbum(id, picked) {
+  const s = SLOTS.find(x => x.id === id);
+  if (s.single) albums[id] = [];
+  albums[id] = albums[id] || [];
+  for (const m of s.single ? picked.slice(0, 1) : picked) if (!albums[id].some(g => g.mediaId === m.id)) albums[id].push({ url: m.url, mediaId: m.id, caption: m.alt || '' });
+  await saveAlbum(id);
+  if ($(`.ph[data-slot="${id}"]`)) renderSlot(id);
+}
+
+// ---- 從媒體庫選（相簿用）----
+function openPicker({ single = false, title = '從媒體庫選' } = {}) {
+  return new Promise(async done => {
+    const ov = document.createElement('div'); ov.className = 'mp-ov';
+    ov.innerHTML = `<div class="mp-box"><div class="mp-head"><h3>${esc(title)}</h3><input type="search" class="inp" placeholder="搜尋" data-q><button class="mp-x" data-x>✕</button></div>
+      <div class="md-folders" data-fs></div><div class="md-grid" data-g><p class="hint">載入中…</p></div>
+      <div class="mp-foot"><span class="muted" data-n></span><label class="btn btn-ghost btn-sm">＋ 上傳新的<input type="file" accept="image/*" multiple hidden data-up></label><button class="btn btn-sm" data-ok disabled>加入</button></div></div>`;
+    document.body.appendChild(ov);
+    const q = s => ov.querySelector(s), sel = new Map();
+    let folder = localStorage.getItem('mp_folder') || '', query = '';
+    const close = r => { ov.remove(); done(r); };
+    const draw = () => {
+      if (folder && !folders().includes(folder) && folder !== NONE) folder = '';
+      const u = usage(), list = filtered(folder, query);
+      q('[data-fs]').innerHTML = folderChips(folder, false);
+      q('[data-g]').innerHTML = list.map(m => tile(m, sel.has(m.id), u, false)).join('') || `<p class="hint" style="grid-column:1/-1">${media.length ? '這裡沒有照片' : '媒體庫還是空的，按右下「上傳新的」'}</p>`;
+      q('[data-n]').textContent = sel.size ? `已選 ${sel.size} 張` : (single ? '選一張' : '可以選多張');
+      q('[data-ok]').disabled = !sel.size; q('[data-ok]').textContent = sel.size ? `加入 ${sel.size} 張` : '加入';
+    };
+    try { await fetchMedia(); } catch (err) { q('[data-g]').innerHTML = `<p class="hint">讀取失敗：${esc(errText(err))}</p>`; }
+    if (media) draw();
+    ov.addEventListener('click', e => {
+      if (e.target === ov || e.target.closest('[data-x]')) return close([]);
+      if (e.target.closest('[data-ok]')) return close([...sel.values()]);
+      const f = e.target.closest('[data-f]'); if (f) { folder = f.dataset.f; localStorage.setItem('mp_folder', folder); return draw(); }
+      const it = e.target.closest('.md-item'); if (!it) return;
+      const m = media.find(x => x.id === it.dataset.id);
+      if (single) { sel.clear(); sel.set(m.id, m); } else sel.has(m.id) ? sel.delete(m.id) : sel.set(m.id, m);
+      draw();
+    });
+    q('[data-q]').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); draw(); });
+    q('[data-up]').addEventListener('change', async e => {
+      const files = [...e.target.files]; e.target.value = '';
+      const here = folder && folder !== NONE ? folder : '';
+      for (const [i, file] of files.entries()) {
+        q('[data-n]').textContent = `上傳中 ${i + 1} / ${files.length}…`;
+        try { const m = await uploadMedia(file, here); if (single) sel.clear(); sel.set(m.id, media.find(x => x.id === m.id)); } catch (err) { q('[data-n]').textContent = '上傳失敗：' + errText(err); }
+      }
+      draw();
+    });
+  });
+}
