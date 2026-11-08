@@ -31,7 +31,7 @@ if (!NAMES[id] || (!photos.length && !reels.length)) {
     ${reels.length ? `<h2 class="al-h">影片</h2><div class="reels" id="reelList"></div>` : ''}
     ${photos.length ? `<h2 class="al-h">照片</h2>
     <div class="al-show${photos.length < 2 ? ' one' : ''}"><div class="al-track">${photos.map((p, i) => `<figure data-i="${i}" style="--bg:url('${p.url}')"><img src="${p.url}" alt="${esc(p.caption || title)}" ${i > 1 ? 'loading="lazy"' : ''}>${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`).join('')}</div>
-      <button class="al-nav al-prev" aria-label="上一張">‹</button><button class="al-nav al-next" aria-label="下一張">›</button><span class="al-count">1 / ${photos.length}</span></div>
+      <button class="al-nav al-go-prev" aria-label="上一張"><svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg></button><button class="al-nav al-go-next" aria-label="下一張"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button><span class="al-count">1 / ${photos.length}</span></div>
     ${photos.length > 1 ? `<div class="al-thumbs">${photos.map((p, i) => `<button data-t="${i}" class="${i ? '' : 'on'}" style="background-image:url('${p.url}')" aria-label="第 ${i + 1} 張"></button>`).join('')}</div>` : ''}` : ''}
     ${others.length ? `<h2 class="al-h">其他相簿</h2><div class="al-next">${others.map(k => `<a href="/album?id=${k}" style="background-image:url('${(d.albums?.[k] || [])[0]?.url || ''}')"><span>${esc(d.albumTitles?.[k] || NAMES[k])}</span></a>`).join('')}</div>` : ''}`;
 }
@@ -49,8 +49,8 @@ if (show_ && photos.length > 1) {
   const track = show_.querySelector('.al-track'), thumbs = [...document.querySelectorAll('.al-thumbs button')];
   const at = () => Math.round(track.scrollLeft / track.clientWidth);
   const go = i => { i = (i + photos.length) % photos.length; track.scrollTo({ left: i * track.clientWidth, behavior: 'smooth' }); };
-  show_.querySelector('.al-prev').addEventListener('click', () => go(at() - 1));
-  show_.querySelector('.al-next').addEventListener('click', () => go(at() + 1));
+  show_.querySelector('.al-go-prev').addEventListener('click', () => go(at() - 1));
+  show_.querySelector('.al-go-next').addEventListener('click', () => go(at() + 1));
   document.querySelector('.al-thumbs').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) go(Number(b.dataset.t)); });
   let st; track.addEventListener('scroll', () => { clearTimeout(st); st = setTimeout(() => {
     const i = at(); show_.querySelector('.al-count').textContent = `${i + 1} / ${photos.length}`;
