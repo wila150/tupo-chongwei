@@ -69,6 +69,20 @@ $('#tabs').addEventListener('click', e => {
 });
 
 const isPast = b => new Date(`${b.date}T${b.time}:00`) < new Date();
+// 工程師專用：刪除預約（清測試資料），只有這個帳號看得到按鈕
+const ENGINEER = 'xiechengfang1@gmail.com';
+const isEngineer = () => (auth.currentUser?.email || '').toLowerCase() === ENGINEER;
+let curGroup = [];
+async function deleteBookings(list) {
+  for (let i = 0; i < list.length; i += 150) {
+    const batch = F.writeBatch(db);
+    for (const b of list.slice(i, i + 150)) {
+      batch.delete(F.doc(db, 'bookings', b.id));
+      if (b.status === 'confirmed') { batch.delete(F.doc(db, 'busy', `${b.date}_${b.time.replace(':', '')}`)); batch.delete(F.doc(db, 'lessons', `bk_${b.id}`)); }
+    }
+    await batch.commit();
+  }
+}
 
 function render() {
   const groups = {
@@ -82,6 +96,8 @@ function render() {
   const nb = document.querySelector('[data-badge=bookings]'); nb.hidden = !pendingCount; nb.textContent = pendingCount;
   $('#cUpcoming').textContent = groups.upcoming.length;
   const items = groups[filter];
+  curGroup = items;
+  const eb = $('#engDelAll'); if (eb) { eb.hidden = !isEngineer() || !items.length; eb.textContent = `🗑 刪除這個分頁全部 ${items.length} 筆（工程師）`; }
   $('#list').innerHTML = items.length ? items.map(card).join('') : `<div class="empty-state"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg><b>${{ pending: '沒有待確認的預約', upcoming: '還沒有即將上課的預約', past: '還沒有上過的課', cancelled: '沒有取消的預約' }[filter]}</b>學員從網站預約後會出現在這裡，也會傳 LINE 通知你</div>`;
 }
 
@@ -91,6 +107,7 @@ function card(b) {
   const actions = [];
   if (b.status === 'pending') actions.push(`<button class="btn" data-act="confirm" data-id="${b.id}">確認</button>`);
   if (b.status !== 'cancelled') actions.push(`<button class="btn btn-ghost" data-act="cancel" data-id="${b.id}">取消</button>`);
+  if (isEngineer()) actions.push(`<button class="btn btn-ghost eng-del" data-act="delete" data-id="${b.id}" title="工程師專用">🗑 刪除</button>`);
   return `<div class="bk ${esc(b.status)}">
     <div>
       <div class="bk-when">${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${esc(b.time)}</div>
@@ -106,6 +123,10 @@ $('#list').addEventListener('click', async e => {
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const b = all.find(x => x.id === btn.dataset.id); if (!b) return;
   const slot = F.doc(db, 'busy', `${b.date}_${b.time.replace(':', '')}`);
+  if (btn.dataset.act === 'delete') {
+    if (!isEngineer() || !confirm(`刪除 ${b.name} ${b.date} ${b.time} 這筆預約？\n（直接從資料庫刪掉，救不回來）`)) return;
+    btn.disabled = true; await deleteBookings([b]).catch(err => { alert('刪除失敗：' + err.message); btn.disabled = false; }); return;
+  }
   btn.disabled = true;
   try {
     const batch = F.writeBatch(db);
@@ -829,3 +850,8 @@ $('#ibThread').addEventListener('submit', async e => {
 });
 A.onAuthStateChanged(auth, u => { if (u) startInbox(); else { chatUnsub?.(); chatUnsub = null; } });
 window.__closeThread = closeThread;
+$('#engDelAll').addEventListener('click', async () => {
+  if (!isEngineer() || !curGroup.length) return;
+  if (!confirm(`刪除這個分頁的 ${curGroup.length} 筆預約？\n（直接從資料庫刪掉，救不回來）`)) return;
+  await deleteBookings(curGroup.slice()).catch(err => alert('刪除失敗：' + err.message));
+});
