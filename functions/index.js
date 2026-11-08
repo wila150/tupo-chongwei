@@ -261,7 +261,8 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
       if (ev.type === 'postback') { await onPostback(ev); continue; }
       // 收件匣：所有傳給官方帳號的訊息、加好友／封鎖都記到後台「訊息」
       const isCode = ev.type === 'message' && ev.message.type === 'text' && /^(通知綁定\s*)?\S+$/.test(ev.message.text.trim()) && ev.message.text.includes(process.env.NOTIFY_CODE || '\u0000');
-      if (ev.type === 'message') await logChat(ev.source.userId, 'in', ev.message.type, isCode ? '（傳了通知綁定密碼）' : msgPreview(ev.message)).catch(e => logger.warn('logChat', e.message));
+      const isCmd = ev.type === 'message' && ev.message.type === 'text' && ['今日課表', '今天的課', '明日課表', '明天的課', '待確認預約', '待確認', '學員堂數'].includes(ev.message.text.trim());
+      if (ev.type === 'message' && !isCmd) await logChat(ev.source.userId, 'in', ev.message.type, isCode ? '（傳了通知綁定密碼）' : msgPreview(ev.message)).catch(e => logger.warn('logChat', e.message));
       else if (ev.type === 'follow') await logChat(ev.source.userId, 'in', 'system', '👋 加入好友').catch(() => {});
       else if (ev.type === 'unfollow') await logChat(ev.source.userId, 'in', 'system', '🚫 封鎖了官方帳號').catch(() => {});
       if (ev.type !== 'message' || ev.message.type !== 'text') continue;
@@ -271,10 +272,15 @@ export const lineWebhook = onRequest({ invoker: 'public' }, async (req, res) => 
       if (m) {
         if (m[1] !== process.env.NOTIFY_CODE) { await reply(ev.replyToken, [text('密碼不對喔')]); continue; }
         await db.doc('notify/config').set({ lineUserIds: FieldValue.arrayUnion(uid) }, { merge: true });
+        await linkCoachMenu(uid, true).catch(() => {});
         await reply(ev.replyToken, [text('✅ 綁定完成！之後有新預約、線上預約或取消都會通知你。\n（傳「取消通知」可以停止）')]);
       } else if (t === '取消通知') {
         await db.doc('notify/config').set({ lineUserIds: FieldValue.arrayRemove(uid) }, { merge: true });
-        await reply(ev.replyToken, [text('已停止通知')]);
+        await linkCoachMenu(uid, false).catch(() => {});
+        await reply(ev.replyToken, [text('已停止通知，選單換回一般版')]);
+      } else if (['今日課表', '今天的課', '明日課表', '明天的課', '待確認預約', '待確認', '學員堂數'].includes(t)) {
+        if (!(await adminIds()).includes(uid)) continue; // 只有教練（通知名單）能查
+        await coachCommand(t, ev);
       } else if (/^(查堂數|剩幾堂|我的堂數)$/.test(t)) {
         const st = await studentByLine(uid);
         await reply(ev.replyToken, [text(st ? `${st.name} 你好！目前剩餘 ${st.credits || 0} 堂${st.expiresAt ? `，${st.expiresAt} 到期` : ''}。` : '還沒有綁定學員資料，請點下方選單「預約私人課」完成綁定。')]);
@@ -323,6 +329,60 @@ export const adminChat = onRequest({ invoker: 'public', cors: [SITE, 'https://tu
     res.json({ ok: true });
   } catch (e) { res.status(e.code >= 400 && e.code < 600 ? e.code : 500).json({ error: e.code ? e.message : '系統忙碌' }); }
 });
+
+/* ---------- 教練圖文選單：只綁給通知名單（notify/config.coachMenuId），按鈕傳文字 → 這裡回覆 ---------- */
+const ADMIN_URL = `${SITE}/admin?openExternalBrowser=1`;
+async function linkCoachMenu(uid, on) {
+  const cfg = (await db.doc('notify/config').get()).data() || {};
+  if (!cfg.coachMenuId) return;
+  const url = `https://api.line.me/v2/bot/user/${uid}/richmenu${on ? `/${cfg.coachMenuId}` : ''}`;
+  const r = await fetch(url, { method: on ? 'POST' : 'DELETE', headers: { Authorization: `Bearer ${await lineToken()}`, 'Content-Length': '0' }, body: on ? '' : undefined }); // LINE 要 Content-Length
+  if (!r.ok) logger.warn('richmenu link', r.status, await r.text());
+}
+function listCard(title, sub, rows, linkLabel, linkUrl) {
+  const body = rows.length ? rows.map(([a, b, c]) => ({ type: 'box', layout: 'baseline', spacing: 'md', margin: 'md', contents: [
+    { type: 'text', text: a, size: 'sm', weight: 'bold', color: '#d7262e', flex: 2 },
+    { type: 'text', text: b, size: 'sm', color: '#222222', flex: 6, wrap: true },
+    ...(c ? [{ type: 'text', text: c, size: 'xs', color: '#999999', flex: 3, align: 'end' }] : [])] }))
+    : [{ type: 'text', text: '沒有資料', size: 'sm', color: '#999999' }];
+  return { type: 'flex', altText: `${title}｜${sub}`, contents: { type: 'bubble', size: 'mega',
+    header: { type: 'box', layout: 'vertical', backgroundColor: '#161616', paddingAll: '16px', contents: [
+      { type: 'text', text: title, color: '#ffffff', weight: 'bold', size: 'lg' }, { type: 'text', text: sub, color: '#ffffffaa', size: 'xs', margin: 'sm' }] },
+    body: { type: 'box', layout: 'vertical', contents: body },
+    footer: { type: 'box', layout: 'vertical', contents: [{ type: 'button', style: 'link', height: 'sm', action: { type: 'uri', label: linkLabel, uri: linkUrl } }] } } };
+}
+async function coachCommand(t, ev) {
+  const cmd = { '今日課表': 0, '今天的課': 0, '明日課表': 1, '明天的課': 1 }[t];
+  if (cmd !== undefined) {
+    const d = twNow(); d.setUTCDate(d.getUTCDate() + cmd); const date = twYmd(d);
+    const snap = await db.collection('lessons').where('date', '==', date).get();
+    const ls = snap.docs.map(x => ({ id: x.id, ...x.data() })).filter(l => l.status !== 'cancelled').sort((a, b) => a.time.localeCompare(b.time));
+    const ids = [...new Set(ls.flatMap(l => l.studentIds || []))];
+    const sts = Object.fromEntries((await Promise.all(ids.map(id => db.doc(`students/${id}`).get()))).filter(s => s.exists).map(s => [s.id, s.data()]));
+    const rows = ls.map(l => [l.time, l.kind === 'block' ? `🔒 ${l.note || '教練行程'}` : (l.studentIds || []).map((id, i) => `${sts[id]?.name || l.studentNames?.[i] || '?'}${sts[id] ? `（剩${sts[id].credits || 0}）` : ''}`).join('、') || '未指定學員',
+      l.status === 'done' ? '✓ 已扣堂' : `${l.minutes || 60} 分`]);
+    return reply(ev.replyToken, [listCard(`${cmd ? '📅 明天' : '📋 今天'}的課`, `${md(date)}・共 ${ls.filter(l => l.kind !== 'block').length} 堂`, rows, '到後台扣堂／排課', `${ADMIN_URL}&view=lessons`)]);
+  }
+  if (t === '待確認預約' || t === '待確認') {
+    const today = twYmd(twNow());
+    const snap = await db.collection('bookings').where('status', '==', 'pending').get();
+    const bs = snap.docs.map(x => ({ id: x.id, ...x.data() })).filter(b => b.date >= today).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    if (!bs.length) return reply(ev.replyToken, [text('🥊 目前沒有待確認的預約 👍')]);
+    const bubbles = bs.slice(0, 10).map(b => bookingCard(b, { title: '🥊 待確認預約', color: '#d7262e', note: b.lineUserId ? '確認後會自動通知客人' : `客人沒綁 LINE，確認後請打 ${b.phone}`,
+      buttons: [pbBtn('✅ 確認', `bk=confirm&id=${b.id}`, '#2fbf71'), pbBtn('❌ 婉拒', `bk=reject&id=${b.id}`)] }).contents);
+    return reply(ev.replyToken, [{ type: 'flex', altText: `待確認預約 ${bs.length} 筆`, contents: { type: 'carousel', contents: bubbles } },
+      ...(bs.length > 10 ? [text(`還有 ${bs.length - 10} 筆，請到後台看`)] : [])]);
+  }
+  if (t === '學員堂數') {
+    const snap = await db.collection('students').get();
+    const today = twYmd(twNow()), soon = twYmd(new Date(Date.now() + (TZ_OFFSET * 60e3) + 14 * 864e5));
+    const st = snap.docs.map(x => x.data()).filter(s => !s.prospect || (s.credits || 0) > 0);
+    const warn = st.filter(s => (s.credits || 0) <= 2 || (s.expiresAt && s.expiresAt <= soon)).sort((a, b) => (a.credits || 0) - (b.credits || 0));
+    const rows = warn.slice(0, 15).map(s => [`${s.credits || 0} 堂`, s.name, s.expiresAt ? (s.expiresAt < today ? '已到期' : `${s.expiresAt.slice(5)} 到期`) : '']);
+    return reply(ev.replyToken, [listCard('👥 該續約的學員', `剩 2 堂以下或 14 天內到期・共 ${warn.length} 位（全部 ${st.length} 位）`, rows, '到後台看學員', `${ADMIN_URL}&view=students`)]);
+  }
+  return null;
+}
 
 /* ---------- 預約單卡片 ---------- */
 function bookingCard(b, { title, color, note, buttons }) {

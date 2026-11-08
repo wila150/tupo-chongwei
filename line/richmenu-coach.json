@@ -1,0 +1,9 @@
+{"size":{"width":2500,"height":1686},"selected":true,"name":"突破重圍 教練選單","chatBarText":"教練選單",
+ "areas":[
+  {"bounds":{"x":0,"y":0,"width":833,"height":843},"action":{"type":"message","label":"今天的課","text":"今日課表"}},
+  {"bounds":{"x":833,"y":0,"width":834,"height":843},"action":{"type":"message","label":"待確認預約","text":"待確認預約"}},
+  {"bounds":{"x":1667,"y":0,"width":833,"height":843},"action":{"type":"message","label":"明天的課","text":"明日課表"}},
+  {"bounds":{"x":0,"y":843,"width":833,"height":843},"action":{"type":"message","label":"學員堂數","text":"學員堂數"}},
+  {"bounds":{"x":833,"y":843,"width":834,"height":843},"action":{"type":"uri","label":"LINE 訊息","uri":"https://tupo-chongwei.web.app/admin?openExternalBrowser=1&view=messages"}},
+  {"bounds":{"x":1667,"y":843,"width":833,"height":843},"action":{"type":"uri","label":"開啟後台","uri":"https://tupo-chongwei.web.app/admin?openExternalBrowser=1"}}
+ ]}

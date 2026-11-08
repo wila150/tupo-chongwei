@@ -50,3 +50,4 @@
 - lineWebhook 要「處理完才回 200」（v2 回應後 CPU 暫停，之前綁定／收件匣會做不完）
 - LINE 訊息收件匣：lineWebhook 把所有訊息／加好友／封鎖存到 `chats/{LINE uid}`（name、pic、studentId/studentName、last、lastDir、lastAt、unread）＋`chats/{uid}/msgs`（dir in/out/system）；後台「訊息」頁（admin.js startInbox/openThread）即時看、回覆走新 function `adminChat`（Firebase ID token＋admins 驗證 → LINE push，會吃每月免費額度）。11/8 以前的訊息沒存，查不到。手機底部列隱藏「報表」換成「訊息」
 - 工程師專用（xiechengfang1@gmail.com，admin.js ENGINEER）：預約頁每筆「🗑 刪除」＋「刪除這個分頁全部」（清測試資料；已確認的會一起刪 busy 與 lessons/bk_id）。只是介面隱藏，rules 仍允許所有 admin 刪
+- 教練圖文選單 `richmenu-d453643ed0175953ec36c3aa16f46a34`（原稿 line/richmenu-coach.html／.json，存在 notify/config.coachMenuId）：只綁給通知名單（綁定時 linkCoachMenu 自動綁、取消通知自動解除）。今天的課／明天的課／待確認預約（carousel 卡片可確認婉拒）／學員堂數 → 傳文字由 lineWebhook coachCommand 回覆（只有 adminIds 能用、不進收件匣）；LINE 訊息、開啟後台 → admin?openExternalBrowser=1&view=…（admin.js 支援 ?view=）

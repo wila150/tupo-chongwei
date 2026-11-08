@@ -49,6 +49,8 @@ A.onAuthStateChanged(auth, user => {
   $('#userName').textContent = user.displayName || '教練';
   $('#userEmail').textContent = user.email || '';
   if (user.photoURL) $('#userPhoto').src = user.photoURL;
+  const goV = new URLSearchParams(location.search).get('view'); // LINE 教練選單直接開某一頁（?view=lessons）
+  if (goV) setTimeout(() => { if (TITLES[goV]) showView(goV); }, 0);
   const q = F.query(F.collection(db, 'bookings'), F.orderBy('date'));
   unsub = F.onSnapshot(q, snap => {
     startCrm();
