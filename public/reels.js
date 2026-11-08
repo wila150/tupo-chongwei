@@ -46,12 +46,13 @@ window.renderReels = function (box, urls, covers) {
     if (f.dataset.playing) { f.style.transform = ''; f.style.top = '-54px'; } // 播放中：原尺寸置中（上下黑邊），IG 的按鈕文字不會被放大
     else { f.style.transformOrigin = '50% 0'; f.style.top = (-54 * k) + 'px'; }
   }
-  addEventListener('blur', function () {
-    setTimeout(function () {
-      var a = document.activeElement;
-      if (a && a.tagName === 'IFRAME' && a.closest('.reel-clip') && !a.dataset.playing) { a.dataset.playing = '1'; fit(a); }
-    }, 0);
-  });
+  // 已經點過一支後，焦點留在那支的 iframe 裡，再點下一支時主視窗不會再 blur → 另外每 0.3 秒檢查目前焦點在哪支
+  function check() {
+    var a = document.activeElement;
+    if (a && a.tagName === 'IFRAME' && a.closest('.reel-clip') && !a.dataset.playing) { a.dataset.playing = '1'; fit(a); }
+  }
+  addEventListener('blur', function () { setTimeout(check, 0); });
+  setInterval(check, 300);
   addEventListener('resize', function () { Array.prototype.forEach.call(document.querySelectorAll('.reel-clip iframe[data-k]'), fit); });
   addEventListener('message', function (e) {
     if (!/instagram\.com$/.test(new URL(e.origin).hostname)) return;
