@@ -319,17 +319,31 @@ form.addEventListener('submit', async e => {
   try {
     if (db) {
       const line = lineProfile ? { lineUserId: lineProfile.userId, lineName: lineProfile.displayName.slice(0, 50) } : {};
-      await fs.addDoc(fs.collection(db, 'bookings'), { ...data, ...line, status: 'pending', createdAt: fs.serverTimestamp() });
+      const ref = await fs.addDoc(fs.collection(db, 'bookings'), { ...data, ...line, status: 'pending', createdAt: fs.serverTimestamp() });
+      data.id = ref.id;
     } else {
       console.info('[demo] booking (Firebase 尚未設定)', data);
     }
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: data.name, phone: data.phone, lineId: data.lineId, level: data.level, who: data.who, people: data.people, goals: data.goals })); } catch {}
     const d = new Date(`${data.date}T00:00:00`);
-    $('#doneSummary').textContent = `${data.name}，你預約了 ${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time} 的私人課。`;
+    // 預約單：跟 LINE 收到的預約單卡片一模一樣（functions bookingCard），可以截圖留存
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const row = (k, v) => `<div class="rc-row"><span>${k}</span><b>${esc(v || '—')}</b></div>`;
+    $('#receipt').innerHTML = `
+      <div class="rc-head"><b>📝 預約單已送出</b><small>突破重圍・私人課預約單</small></div>
+      <div class="rc-body">
+        <div class="rc-when">${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()].replace('週', '')}） ${esc(data.time)}</div>
+        <hr>
+        ${row('姓名', data.name)}${row('電話', data.phone)}${row('人數', `${data.people || 1} 人`)}${row('程度', `${data.level || ''}・${data.who || ''}`)}
+        ${row('想練', data.goals.join('、'))}${data.note ? row('備註', data.note) : ''}
+        <p class="rc-note">教練確認後會再通知你。要改時間或取消，直接傳 LINE 給教練。</p>
+        ${data.id ? `<p class="rc-id">預約編號 ${esc(data.id.slice(0, 8).toUpperCase())}</p>` : ''}
+      </div>`;
+    $('#doneSummary').textContent = '教練確認後會盡快聯絡你。想更快？直接傳 LINE 跟教練說一聲。';
     const msg = `教練你好，我在網站預約了私人課：\n${d.getMonth() + 1}/${d.getDate()}（${DAY[d.getDay()]}）${data.time}\n${data.name} ${data.phone}`;
     const oa = lineProfile ? null : S.contact.lineOA; // 從 LINE 預約的人，伺服器會直接把預約單傳到他的 LINE
     $('#doneLine').hidden = !oa;
-    if (lineProfile) $('#doneSummary').textContent += ' 預約單已經傳到你的 LINE，教練確認後會再通知你。';
+    if (lineProfile) $('#doneSummary').textContent = '這張預約單也已經傳到你的 LINE，教練確認後會再通知你。';
     if (oa) {
       $('#lineMsg').textContent = msg;
       $('#lineGo').href = `https://line.me/R/oaMessage/${oa}/?${encodeURIComponent(msg)}`;

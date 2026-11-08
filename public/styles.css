@@ -368,3 +368,16 @@ a.reel-frame:hover .reel-clip { filter: brightness(1.12); }
 
 .side-social, .float-cta { transition: opacity .25s, visibility .25s; }
 @media (max-width: 760px) { body.hero-cta-on .side-social, body.hero-cta-on .float-cta { opacity: 0; visibility: hidden; pointer-events: none; } }
+
+/* 網站預約完成：預約單（跟 LINE 的預約單卡片同樣式） */
+.receipt { text-align: left; background: #fff; color: #222; border-radius: 18px; overflow: hidden; margin: 1.2rem auto; max-width: 400px; box-shadow: 0 12px 40px rgba(0,0,0,.45); }
+.rc-head { background: #d7262e; color: #fff; padding: 16px; }
+.rc-head b { display: block; font-size: 1.15rem; }
+.rc-head small { display: block; margin-top: .3rem; font-size: .75rem; color: rgba(255,255,255,.8); }
+.rc-body { padding: 18px 16px 16px; }
+.rc-when { font-weight: 800; font-size: 1.75rem; line-height: 1.2; }
+.rc-body hr { border: 0; border-top: 1px solid #e5e5e5; margin: 14px 0 6px; }
+.rc-row { display: grid; grid-template-columns: 2fr 5fr; gap: .8rem; padding: .45rem 0; font-size: .92rem; }
+.rc-row span { color: #999; } .rc-row b { color: #222; font-weight: 400; word-break: break-all; }
+.rc-note { margin-top: 1rem; font-size: .8rem; color: #888; }
+.rc-id { margin-top: .5rem; font-size: .72rem; color: #bbb; letter-spacing: .06em; }

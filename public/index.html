@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=202611081721">
+  <link rel="stylesheet" href="styles.css?v=202611081736">
   <script>/* ?book：LINE 圖文選單開的精簡預約頁 */ if (/[?&]book\b/.test(location.search)) document.documentElement.classList.add('book-only');</script>
 </head>
 <body>
@@ -215,8 +215,8 @@
       <div class="booking-done" id="bookingDone" hidden>
         <div class="done-icon">🥊</div>
         <h3>預約已送出！</h3>
-        <p id="doneSummary"></p>
-        <p class="muted">教練確認後會盡快聯絡你。想更快？直接傳 LINE 跟教練說一聲。</p>
+        <div class="receipt" id="receipt"></div>
+        <p id="doneSummary" class="muted"></p>
         <button class="btn btn-line" type="button" id="doneLine" hidden>傳 LINE 告訴教練</button>
         <button class="btn btn-ghost" type="button" id="bookAgain">再預約一堂</button>
       </div>
@@ -274,8 +274,8 @@
 </div>
 <a href="#booking" class="float-cta">預約</a>
 
-<script src="data.js?v=202611081721"></script>
-<script src="reels.js?v=202611081721"></script>
-  <script type="module" src="app.js?v=202611081721"></script>
+<script src="data.js?v=202611081736"></script>
+<script src="reels.js?v=202611081736"></script>
+  <script type="module" src="app.js?v=202611081736"></script>
 </body>
 </html>
